@@ -104,6 +104,10 @@
           <input name="word" class="edit-field" type="text" value="${esc(w.word)}" required>
         </div>
         <div class="filter-group">
+          <label>Native Script</label>
+          <input name="word_scripted" class="edit-field" type="text" value="${esc(w.word_scripted || '')}">
+        </div>
+        <div class="filter-group">
           <label>Part of Speech</label>
           ${makeSelect('pos', filtersData.parts_of_speech, w.pos || '')}
         </div>
@@ -146,6 +150,7 @@
     const tagsRaw = form.tags.value.trim();
     const body = {
       word: form.word.value.trim(),
+      word_scripted: form.word_scripted.value.trim() || null,
       def_en: form.def_en.value.trim() || null,
       pos: form.pos.value.trim() || null,
       class: form.class.value.trim() || null,

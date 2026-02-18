@@ -70,7 +70,7 @@ def get_word(word_id: int):
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                "SELECT id, word, def_en, pos, class, language_code, etymology, tags, example FROM words WHERE id = %s",
+                "SELECT id, word, word_scripted, def_en, pos, class, language_code, etymology, tags, example FROM words WHERE id = %s",
                 (word_id,),
             )
             row = cur.fetchone()
@@ -79,7 +79,7 @@ def get_word(word_id: int):
     return dict(row)
 
 
-_WORD_FIELDS = {'word', 'def_en', 'pos', 'class', 'language_code', 'etymology', 'tags', 'example'}
+_WORD_FIELDS = {'word', 'word_scripted', 'def_en', 'pos', 'class', 'language_code', 'etymology', 'tags', 'example'}
 
 @app.put("/api/words/{word_id}")
 def update_word(word_id: int, body: dict[str, Any] = Body(...)):
