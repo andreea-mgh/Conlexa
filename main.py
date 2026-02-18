@@ -107,6 +107,28 @@ def delete_word(word_id: int):
     return {"ok": True}
 
 
+@app.post("/api/words", status_code=201)
+def create_word(body: dict[str, Any] = Body(...)):
+    fields = {k: v for k, v in body.items() if k in _WORD_FIELDS}
+    if 'word' not in fields:
+        raise HTTPException(status_code=400, detail="'word' is required")
+    cols = ', '.join(f'"{k}"' for k in fields)
+    placeholders = ', '.join('%s' for _ in fields)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f'INSERT INTO words ({cols}) VALUES ({placeholders}) RETURNING id',
+                list(fields.values()),
+            )
+            new_id = cur.fetchone()[0]
+    return {"id": new_id}
+
+
+@app.get("/add")
+def add_page():
+    return FileResponse("add.html")
+
+
 @app.get("/dictionary")
 def dictionary():
     return FileResponse("dict.html")

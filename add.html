@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Add Word ⋄ Conlexa</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+<header>
+  <h1><a href="/" class="entry-link">Conlexa</a></h1>
+  <span class="subtitle">Dictionary</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <a href="/dictionary" class="reset-btn" style="display:block;text-align:center;text-decoration:none">← Back</a>
+  </aside>
+
+  <main>
+    <form id="add-form">
+      <div class="filter-group">
+        <label>Word</label>
+        <input name="word" class="edit-field" type="text" required autofocus>
+      </div>
+      <div class="filter-group">
+        <label>Native Script</label>
+        <input name="word_scripted" class="edit-field" type="text">
+      </div>
+      <div class="filter-group">
+        <label>Part of Speech</label>
+        <select name="pos" class="edit-field" id="pos-select">
+          <option value="">—</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Class</label>
+        <input name="class" class="edit-field" type="text">
+      </div>
+      <div class="filter-group">
+        <label>Language Code</label>
+        <select name="language_code" class="edit-field" id="lang-select">
+          <option value="">—</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Definition</label>
+        <textarea name="def_en" class="edit-field" rows="4"></textarea>
+      </div>
+      <div class="filter-group">
+        <label>Etymology</label>
+        <textarea name="etymology" class="edit-field" rows="3"></textarea>
+      </div>
+      <div class="filter-group">
+        <label>Example</label>
+        <textarea name="example" class="edit-field" rows="2"></textarea>
+      </div>
+      <div class="filter-group">
+        <label>Tags (comma-separated)</label>
+        <input name="tags" class="edit-field" type="text">
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+        <button type="submit" class="reset-btn" id="submit-btn" style="color:var(--accent);border-color:var(--accent-dim)">Add word</button>
+        <a href="/dictionary" class="reset-btn" style="text-decoration:none;text-align:center">Cancel</a>
+      </div>
+    </form>
+  </main>
+</div>
+
+<script>
+  async function loadFilters() {
+    const res = await fetch('/api/filters');
+    if (!res.ok) return;
+    const data = await res.json();
+    const posSelect = document.getElementById('pos-select');
+    data.parts_of_speech.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p;
+      posSelect.appendChild(opt);
+    });
+    const langSelect = document.getElementById('lang-select');
+    data.language_codes.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l; opt.textContent = l;
+      langSelect.appendChild(opt);
+    });
+  }
+
+  document.getElementById('add-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const tagsRaw = form.tags.value.trim();
+    const body = {
+      word: form.word.value.trim(),
+      word_scripted: form.word_scripted.value.trim() || null,
+      pos: form.pos.value || null,
+      class: form.class.value.trim() || null,
+      language_code: form.language_code.value || null,
+      def_en: form.def_en.value.trim() || null,
+      etymology: form.etymology.value.trim() || null,
+      example: form.example.value.trim() || null,
+      tags: tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : null,
+    };
+    const btn = document.getElementById('submit-btn');
+    btn.textContent = 'Adding…';
+    btn.disabled = true;
+    const res = await fetch('/api/words', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      const { id } = await res.json();
+      window.location.href = `/word/${id}`;
+    } else {
+      btn.textContent = 'Add word';
+      btn.disabled = false;
+      alert('Failed to add word. Please try again.');
+    }
+  });
+
+  loadFilters();
+</script>
+</body>
+</html>
