@@ -33,7 +33,7 @@ Requirements:
 pip install fastapi uvicorn psycopg2-binary
 ```
 
-Change environment variables to your username and password in `run.sh` then run it.
+Change environment variables to your username and password in `run.sh` then run it. Open `localhost:8000` in your browser.
 
 
 For now it works on Linux.
