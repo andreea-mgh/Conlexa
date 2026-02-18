@@ -126,17 +126,17 @@ def create_word(body: dict[str, Any] = Body(...)):
 
 @app.get("/add")
 def add_page():
-    return FileResponse("add.html")
+    return FileResponse("site/add.html")
 
 
 @app.get("/dictionary")
 def dictionary():
-    return FileResponse("dict.html")
+    return FileResponse("site/dict.html")
 
 
 @app.get("/word/{word_id}")
 def word_page(word_id: int):
-    return FileResponse("word.html")
+    return FileResponse("site/word.html")
 
 
 @app.get("/api/filters")
@@ -151,4 +151,4 @@ def get_filters():
 
 
 # Serve frontend
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
+app.mount("/", StaticFiles(directory="site", html=True), name="static")
