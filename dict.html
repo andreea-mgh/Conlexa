@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dictionary ⋄ Conlexa</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+<header>
+  <h1><a href="/" class="entry-link">Conlexa</a></h1>
+  <span class="subtitle">Dictionary</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="filter-group">
+      <label>Part of Speech</label>
+      <select id="pos-filter">
+        <option value="">all</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Language</label>
+      <select id="lang-filter">
+        <option value="">all</option>
+      </select>
+    </div>
+
+    <button class="reset-btn" onclick="resetFilters()">Reset filters</button>
+
+    <div class="stat">
+      <span id="total-count">—</span>
+      words found
+    </div>
+  </aside>
+
+  <main>
+    <div class="results-meta" id="results-meta">Loading…</div>
+    <div id="table-container"><div class="loading">Loading</div></div>
+    <div class="pagination" id="pagination" style="display:none"></div>
+  </main>
+</div>
+
+<script>
+  const PAGE_SIZE = 50;
+  let currentPage = 0;
+  let totalWords = 0;
+
+  async function loadFilters() {
+    const res = await fetch('/api/filters');
+    const data = await res.json();
+
+    const posSelect = document.getElementById('pos-filter');
+    data.parts_of_speech.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p;
+      posSelect.appendChild(opt);
+    });
+
+    const langSelect = document.getElementById('lang-filter');
+    data.language_codes.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l; opt.textContent = l.toUpperCase();
+      langSelect.appendChild(opt);
+    });
+  }
+
+  function getFilters() {
+    return {
+      part_of_speech: document.getElementById('pos-filter').value,
+      language_code: document.getElementById('lang-filter').value,
+    };
+  }
+
+  async function loadWords() {
+    const container = document.getElementById('table-container');
+    container.innerHTML = '<div class="loading">Loading</div>';
+
+    const { part_of_speech, language_code } = getFilters();
+    const params = new URLSearchParams({ limit: PAGE_SIZE, offset: currentPage * PAGE_SIZE });
+    if (part_of_speech) params.set('part_of_speech', part_of_speech);
+    if (language_code) params.set('language_code', language_code);
+
+    const res = await fetch('/api/words?' + params);
+    const data = await res.json();
+    totalWords = data.total;
+
+    document.getElementById('total-count').textContent = totalWords.toLocaleString();
+    document.getElementById('results-meta').textContent =
+      `Showing ${data.words.length ? currentPage * PAGE_SIZE + 1 : 0}–${currentPage * PAGE_SIZE + data.words.length} of ${totalWords.toLocaleString()} entries`;
+
+    if (!data.words.length) {
+      container.innerHTML = '<div class="empty">No words match the current filters.</div>';
+      document.getElementById('pagination').style.display = 'none';
+      return;
+    }
+
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Word</th>
+          <th>Part of Speech</th>
+          <th>Language</th>
+          <th>Definition / Etymology</th>
+        </tr>
+      </thead>
+    `;
+    const tbody = document.createElement('tbody');
+
+    data.words.forEach(w => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="word-cell"><a class="entry-link" href="/word/${w.id}">${esc(w.word)}</a></td>
+        <td>${w.pos ? `<span class="pos-badge">${esc(w.pos)}</span> <span class="etymology">${esc(w.class || '')}</span>` : '<span style="color:var(--text-dimmer)">—</span>'}</td>
+        <td>${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}</td>
+        <td>
+          <div class="definition">${esc(w.def_en || '')}</div>
+          ${w.etymology ? `<div class="etymology">${esc(w.etymology)}</div>` : ''}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    container.innerHTML = '';
+    container.appendChild(table);
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const pag = document.getElementById('pagination');
+    const totalPages = Math.ceil(totalWords / PAGE_SIZE);
+    if (totalPages <= 1) { pag.style.display = 'none'; return; }
+    pag.style.display = 'flex';
+    pag.innerHTML = '';
+
+    const prev = document.createElement('button');
+    prev.className = 'page-btn';
+    prev.textContent = '← Prev';
+    prev.disabled = currentPage === 0;
+    prev.onclick = () => { currentPage--; loadWords(); window.scrollTo(0,0); };
+    pag.appendChild(prev);
+
+    // Show page numbers around current
+    const start = Math.max(0, currentPage - 2);
+    const end = Math.min(totalPages - 1, currentPage + 2);
+    for (let i = start; i <= end; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+      btn.textContent = i + 1;
+      btn.onclick = ((_i) => () => { currentPage = _i; loadWords(); window.scrollTo(0,0); })(i);
+      pag.appendChild(btn);
+    }
+
+    const next = document.createElement('button');
+    next.className = 'page-btn';
+    next.textContent = 'Next →';
+    next.disabled = currentPage >= totalPages - 1;
+    next.onclick = () => { currentPage++; loadWords(); window.scrollTo(0,0); };
+    pag.appendChild(next);
+
+    const info = document.createElement('span');
+    info.className = 'page-info';
+    info.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+    pag.appendChild(info);
+  }
+
+  function resetFilters() {
+    document.getElementById('pos-filter').value = '';
+    document.getElementById('lang-filter').value = '';
+    currentPage = 0;
+    loadWords();
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  document.getElementById('pos-filter').addEventListener('change', () => { currentPage = 0; loadWords(); });
+  document.getElementById('lang-filter').addEventListener('change', () => { currentPage = 0; loadWords(); });
+
+  loadFilters();
+  loadWords();
+</script>
+</body>
+</html>

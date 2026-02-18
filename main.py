@@ -1,0 +1,132 @@
+from fastapi import FastAPI, Query, HTTPException, Body
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import psycopg2
+import psycopg2.extras
+import os
+from typing import Any
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+DB_CONFIG = {
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": os.getenv("DB_PORT", 5432),
+    "dbname": os.getenv("DB_NAME", "conlang"),
+    "user": os.getenv("DB_USER", "conlexa"),
+    "password": os.getenv("DB_PASSWORD", "password"),
+}
+
+def get_conn():
+    return psycopg2.connect(**DB_CONFIG)
+
+
+@app.get("/api/words")
+def get_words(
+    part_of_speech: str = Query(None),
+    language_code: str = Query(None),
+    limit: int = Query(100, le=500),
+    offset: int = Query(0),
+):
+    filters = []
+    params = []
+
+    if part_of_speech:
+        filters.append("pos = %s")
+        params.append(part_of_speech)
+    if language_code:
+        filters.append("language_code = %s")
+        params.append(language_code)
+
+    where = ("WHERE " + " AND ".join(filters)) if filters else ""
+
+    params_count = params.copy()
+    params += [limit, offset]
+
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(f"SELECT COUNT(*) FROM words {where}", params_count)
+            total = cur.fetchone()["count"]
+
+            cur.execute(
+                f"SELECT id, word, def_en, pos, class, language_code, etymology "
+                f"FROM words {where} ORDER BY word LIMIT %s OFFSET %s",
+                params,
+            )
+            rows = cur.fetchall()
+
+    return {"total": total, "words": [dict(r) for r in rows]}
+
+
+@app.get("/api/words/{word_id}")
+def get_word(word_id: int):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, word, def_en, pos, class, language_code, etymology, tags, example FROM words WHERE id = %s",
+                (word_id,),
+            )
+            row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Word not found")
+    return dict(row)
+
+
+_WORD_FIELDS = {'word', 'def_en', 'pos', 'class', 'language_code', 'etymology', 'tags', 'example'}
+
+@app.put("/api/words/{word_id}")
+def update_word(word_id: int, body: dict[str, Any] = Body(...)):
+    updates = {k: v for k, v in body.items() if k in _WORD_FIELDS}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    set_clause = ', '.join(f'"{k}" = %s' for k in updates)
+    values = list(updates.values()) + [word_id]
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f'UPDATE words SET {set_clause} WHERE id = %s', values)
+            affected = cur.rowcount
+    if affected == 0:
+        raise HTTPException(status_code=404, detail="Word not found")
+    return {"ok": True}
+
+
+@app.delete("/api/words/{word_id}")
+def delete_word(word_id: int):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM words WHERE id = %s", (word_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Word not found")
+    return {"ok": True}
+
+
+@app.get("/dictionary")
+def dictionary():
+    return FileResponse("dict.html")
+
+
+@app.get("/word/{word_id}")
+def word_page(word_id: int):
+    return FileResponse("word.html")
+
+
+@app.get("/api/filters")
+def get_filters():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT code FROM parts_of_speech WHERE code IS NOT NULL ORDER BY 1")
+            parts = [r[0] for r in cur.fetchall()]
+            cur.execute("SELECT code FROM langs WHERE code IS NOT NULL ORDER BY 1")
+            langs = [r[0] for r in cur.fetchall()]
+    return {"parts_of_speech": parts, "language_codes": langs}
+
+
+# Serve frontend
+app.mount("/", StaticFiles(directory=".", html=True), name="static")

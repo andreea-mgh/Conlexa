@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Conlexa</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+<header>
+  <h1><a href="/" class="entry-link">Conlexa</a></h1>
+  <span class="subtitle">Dictionary</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <a href="/dictionary" class="reset-btn" style="display:block;text-align:center;text-decoration:none">← Back</a>
+    <button class="reset-btn" id="edit-btn" onclick="startEdit()" style="display:none">Edit</button>
+    <button class="reset-btn" id="delete-btn" onclick="deleteWord()" style="display:none;color:var(--text-dim);border-color:var(--border)">Delete</button>
+  </aside>
+
+  <main id="content">
+    <div class="loading">Loading</div>
+  </main>
+</div>
+
+<script>
+  const id = window.location.pathname.split('/').pop();
+  let wordData = null;
+  let filtersData = { parts_of_speech: [], language_codes: [] };
+
+  async function loadFilters() {
+    const res = await fetch('/api/filters');
+    if (res.ok) filtersData = await res.json();
+  }
+
+  function makeSelect(name, options, current) {
+    const opts = options.map(o =>
+      `<option value="${esc(o)}"${o === current ? ' selected' : ''}>${esc(o)}</option>`
+    ).join('');
+    return `<select name="${name}" class="edit-field"><option value="">—</option>${opts}</select>`;
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderView(w) {
+    wordData = w;
+    document.getElementById('edit-btn').style.display = '';
+    document.getElementById('delete-btn').style.display = '';
+    document.getElementById('content').innerHTML = `
+      <div style="padding-bottom:2rem;margin-bottom:2rem;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+          <h2 style="font-family:var(--serif);font-size:2.8rem;font-weight:400;color:var(--text)">${esc(w.word)}</h2>
+          ${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}
+        </div>
+        ${w.pos ? `<div><span class="pos-badge">${esc(w.pos)}</span>${w.class ? ` <span class="etymology">${esc(w.class)}</span>` : ''}</div>` : ''}
+      </div>
+      ${w.def_en ? `
+      <div style="margin-bottom:2rem">
+        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:.75rem">Definition</div>
+        <div class="definition" style="font-size:1rem;max-width:none">${esc(w.def_en)}</div>
+      </div>` : ''}
+      ${w.etymology ? `
+      <div style="margin-bottom:2rem">
+        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:.75rem">Etymology</div>
+        <div class="etymology" style="font-size:14px">${esc(w.etymology)}</div>
+      </div>` : ''}
+      ${w.tags && w.tags.length > 0 ? `
+      <div style="margin-bottom:2rem">
+        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:.75rem">Tags</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">${w.tags.map(t => `<span class="lang-badge">${esc(t)}</span>`).join('')}</div>
+      </div>` : ''}
+      ${w.example ? `
+      <div>
+        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:.75rem">Example</div>
+        <div style="font-size:14px;font-style:italic;color:var(--text-dim)">${esc(w.example)}</div>
+      </div>` : ''}
+    `;
+  }
+
+  async function deleteWord() {
+    if (!confirm(`Delete "${wordData.word}"? This cannot be undone.`)) return;
+    const res = await fetch(`/api/words/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      window.location.href = '/dictionary';
+    } else {
+      alert('Delete failed. Please try again.');
+    }
+  }
+
+  function startEdit() {
+    const w = wordData;
+    document.getElementById('edit-btn').style.display = 'none';
+    document.getElementById('delete-btn').style.display = 'none';
+    document.getElementById('content').innerHTML = `
+      <form id="edit-form">
+        <div class="filter-group">
+          <label>Word</label>
+          <input name="word" class="edit-field" type="text" value="${esc(w.word)}" required>
+        </div>
+        <div class="filter-group">
+          <label>Part of Speech</label>
+          ${makeSelect('pos', filtersData.parts_of_speech, w.pos || '')}
+        </div>
+        <div class="filter-group">
+          <label>Class</label>
+          <input name="class" class="edit-field" type="text" value="${esc(w.class || '')}">
+        </div>
+        <div class="filter-group">
+          <label>Language Code</label>
+          ${makeSelect('language_code', filtersData.language_codes, w.language_code || '')}
+        </div>
+        <div class="filter-group">
+          <label>Definition</label>
+          <textarea name="def_en" class="edit-field" rows="4">${esc(w.def_en || '')}</textarea>
+        </div>
+        <div class="filter-group">
+          <label>Etymology</label>
+          <textarea name="etymology" class="edit-field" rows="3">${esc(w.etymology || '')}</textarea>
+        </div>
+        <div class="filter-group">
+          <label>Example</label>
+          <textarea name="example" class="edit-field" rows="2">${esc(w.example || '')}</textarea>
+        </div>
+        <div class="filter-group">
+          <label>Tags (comma-separated)</label>
+          <input name="tags" class="edit-field" type="text" value="${esc((w.tags || []).join(', '))}">
+        </div>
+        <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+          <button type="submit" class="reset-btn" style="color:var(--accent);border-color:var(--accent-dim)">Save</button>
+          <button type="button" class="reset-btn" onclick="renderView(wordData)">Cancel</button>
+        </div>
+      </form>
+    `;
+    document.getElementById('edit-form').addEventListener('submit', saveWord);
+  }
+
+  async function saveWord(e) {
+    e.preventDefault();
+    const form = e.target;
+    const tagsRaw = form.tags.value.trim();
+    const body = {
+      word: form.word.value.trim(),
+      def_en: form.def_en.value.trim() || null,
+      pos: form.pos.value.trim() || null,
+      class: form.class.value.trim() || null,
+      language_code: form.language_code.value.trim() || null,
+      etymology: form.etymology.value.trim() || null,
+      example: form.example.value.trim() || null,
+      tags: tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : null,
+    };
+    const btn = form.querySelector('[type=submit]');
+    btn.textContent = 'Saving…';
+    btn.disabled = true;
+    const res = await fetch(`/api/words/${id}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      loadWord();
+    } else {
+      btn.textContent = 'Save';
+      btn.disabled = false;
+      alert('Save failed. Please try again.');
+    }
+  }
+
+  async function loadWord() {
+    const res = await fetch(`/api/words/${id}`);
+    const content = document.getElementById('content');
+    if (!res.ok) {
+      content.innerHTML = '<div class="empty">Word not found.</div>';
+      return;
+    }
+    const w = await res.json();
+    document.title = `Word: ${w.word} ⋄ Conlexa`;
+    renderView(w);
+  }
+
+  loadFilters();
+  loadWord();
+</script>
+</body>
+</html>
