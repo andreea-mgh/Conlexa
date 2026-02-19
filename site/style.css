@@ -40,6 +40,21 @@ header .subtitle {
   text-transform: uppercase;
 }
 
+h2 {
+  font-family: var(--serif);
+  color: var(--accent);
+  margin-bottom: 1rem;
+  font-size: 2.5em;
+}
+
+h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  color: var(--accent-dim);
+  margin-bottom: 0.75rem;
+  font-size: 1.8em;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 240px 1fr;
@@ -366,9 +381,9 @@ a.entry-link:hover {
   color: var(--accent-dim);
 }
 
-h2.page-link {
+.page-link {
   color: var(--accent);
-  font-size: 3em; 
+  /* font-size: 3em;  */
 }
 
 .page-link a {
