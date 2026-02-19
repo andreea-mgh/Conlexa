@@ -15,7 +15,7 @@
 - [ ] Languages
   - [ ] Add language and code
   - [ ] Language presentation and page
-- [ ] IPA auto-guesser
+- [x] IPA auto-guesser
 - [ ] Conjugator
 
 
