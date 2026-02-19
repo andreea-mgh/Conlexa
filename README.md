@@ -16,6 +16,7 @@
   - [ ] Add language and code
   - [ ] Language presentation and page
 - [x] IPA auto-guesser
+  - [ ] Add wordshift playground for testing
 - [ ] Conjugator
 
 
