@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IPA Documentation ⋄ Conlexa</title>
+<link rel="stylesheet" href="/style.css"/>
+</head>
+
+<body>
+
+<header>
+  <h1><a href="/" class="entry-link">Conlexa</a></h1>
+  <span class="subtitle">Wordshift Documentation</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <button class="reset-btn" onclick="window.location.href='/phono/ipa'">← Back</button>
+  </aside>
+
+  <main id="content">
+    <h2>Wordshift Documentation</h2>
+    <p>Wordshift is a tool for applying sound changes to words. It is enabled by default on dictionary entries and checks if a valid ruleset has been defined for the word's language.</p>
+    <p>To define a ruleset, go to the <a href="/phono/ipa">IPA Rulesets</a> page and click on a language. The ruleset editor allows you to define sound changes using a simple syntax. Once you have defined a ruleset, it will be automatically applied to all words in that language as long as the syntax is valid.</p>
+    <h3>Syntax</h3>
+    <h4>Sections</h4>
+    <p>A ruleset is divided into sections, defined by a <code>$</code> symbol at the beginning of the line.</p>
+
+
+    <h5>$GROUPS</h5>
+    <p>This section defines symbols or groups of symbols that can be referenced in the rules. Each line defines a group in the format <code>NAME:symbol1,symbol2,...</code> where NAME is a capital letter. For example:</p>
+    <pre><code>$GROUPS
+V:a,e,i,o,u
+K:p,t,k</code></pre>
+    <p>This defines a group <em>V</em> that represents the vowels and a group <em>K</em> that represents the voiceless stops.</p>
+
+
+    <h5>$SUBST</h5>
+    <p>This section defines the first stage of substitution in the ruleset. What is particular about this section is the fact that <em>the substitutions will not overlap</em>. It is meant for general letter/digraph to sound mapping. The syntax is also simpler than in the other substitution sections, with the only format accepted being <code>pattern:replacement</code>.</p>
+    <p>For example:</p>
+    <pre><code>$SUBST
+ei:e
+e:ɛ
+ch:k
+sh:ʃ
+th:θ</code></pre>
+    <p>If this ruleset would be applied to a word like <em>chein</em>, it would be transformed to <em>chen</em> after the first rule but the second rule would not be able to transform it further into <em>chɛn</em> because the "ei" group has already been substituted, making this section perfect for simple sound mapping.</p>
+
+    
+    <h5>$POST</h5>
+    <p>This section defines the second stage of substitution in the ruleset. The syntax is more complex than in the $SUBST section. The minimal syntax is <code>pattern:replacement</code>, but can be expanded with an optional parameter: <code>pattern:replacement:context</code>. The context part is optional and can be used to specify when the substitution should occur.</p>
+    <p>This section can also reference groups defined in the <code>$GROUPS</code> section.</p>
+    <p>The context part is a string containing an underscore, representing the substitution. In this string you can also include the word boundary as <code>%</code>.</p>
+    <p>For example, if you have a group <code>V:a,e,i,o,u</code> in the $GROUPS section, you can use it in the $POST section like this:</p>
+    <pre><code>$POST
+V:ɛ:V_
+V:ɔ:_V</code></pre>
+    <p>This would replace vowels with ɛ after another vowel and with ɔ before another vowel.</p>
+    <p>Keep in mind that these substitutions can be applied on top of each other.</p>
+    
+    <h4>Comments</h4>
+    <p>You can add comments to your ruleset by starting a line with <code>#</code>. Comments are ignored by the ruleset processor and can be used to explain the purpose of certain rules or to temporarily disable them. Comments are stored on save.</p>
+    <p>The processor also ignores newlines and whitespace.</p>
+
+</main>
+
+</body>
