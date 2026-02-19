@@ -28,9 +28,9 @@
     <p>A ruleset is divided into sections, defined by a <code>$</code> symbol at the beginning of the line.</p>
 
 
-    <h5>$GROUPS</h5>
+    <h5>$GROUP</h5>
     <p>This section defines symbols or groups of symbols that can be referenced in the rules. Each line defines a group in the format <code>NAME:symbol1,symbol2,...</code> where NAME is a capital letter. For example:</p>
-    <pre><code>$GROUPS
+    <pre><code>$GROUP
 V:a,e,i,o,u
 K:p,t,k</code></pre>
     <p>This defines a group <em>V</em> that represents the vowels and a group <em>K</em> that represents the voiceless stops.</p>
@@ -50,9 +50,9 @@ th:θ</code></pre>
     
     <h5>$POST</h5>
     <p>This section defines the second stage of substitution in the ruleset. The syntax is more complex than in the $SUBST section. The minimal syntax is <code>pattern:replacement</code>, but can be expanded with an optional parameter: <code>pattern:replacement:context</code>. The context part is optional and can be used to specify when the substitution should occur.</p>
-    <p>This section can also reference groups defined in the <code>$GROUPS</code> section.</p>
+    <p>This section can also reference groups defined in the <code>$GROUP</code> section.</p>
     <p>The context part is a string containing an underscore, representing the substitution. In this string you can also include the word boundary as <code>%</code>.</p>
-    <p>For example, if you have a group <code>V:a,e,i,o,u</code> in the $GROUPS section, you can use it in the $POST section like this:</p>
+    <p>For example, if you have a group <code>V:a,e,i,o,u</code> in the <code>$GROUP</code> section, you can use it in the <code>$POST</code> section like this:</p>
     <pre><code>$POST
 V:ɛ:V_
 V:ɔ:_V</code></pre>
