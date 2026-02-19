@@ -125,6 +125,13 @@ def create_word(body: dict[str, Any] = Body(...)):
             new_id = cur.fetchone()[0]
     return {"id": new_id}
 
+@app.get("/api/langs")
+def get_langs():
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT code, name_en, ipa_ruleset FROM langs ORDER BY code")
+            rows = cur.fetchall()
+    return {"langs": [dict(r) for r in rows]}
 
 @app.get("/api/langs/{lang_code}")
 def get_lang(lang_code: str):
@@ -197,6 +204,11 @@ def dictionary():
 @app.get("/word/{word_id}")
 def word_page(word_id: int):
     return FileResponse("site/word.html")
+
+@app.get("/phono/ipa")
+def ipa_index():
+    return FileResponse("site/ipa.html")
+
 
 @app.get("/phono/ipa/{lang_code}")
 def ipa_page(lang_code: str):

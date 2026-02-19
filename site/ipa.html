@@ -15,7 +15,7 @@
 
 <div class="layout">
   <aside>
-    <button class="reset-btn" onclick="window.location.href='/dictionary'">← Back</button>
+    <button class="reset-btn" id="back-btn" onclick="window.location.href='/phono/ipa'">← Back</button>
   </aside>
 
   <main id="main" class="main-flex">
@@ -24,7 +24,33 @@
 </div>
 
 <script>
-  const lang = window.location.pathname.split('/').pop().toUpperCase();
+  const pathEnd = window.location.pathname.split('/').filter(Boolean).pop();
+  const isIndex = pathEnd === 'ipa';
+  const lang = isIndex ? null : pathEnd.toUpperCase();
+
+  function esc(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async function loadIndex() {
+    document.title = 'IPA Rulesets ⋄ Conlexa';
+    document.getElementById('lang-label').textContent = 'IPA Rulesets';
+    const main = document.getElementById('main');
+    const res = await fetch('/api/langs');
+    if (!res.ok) { main.innerHTML = '<div class="empty">Failed to load languages.</div>'; return; }
+    const data = await res.json();
+    if (data.langs.length === 0) {
+      main.innerHTML = '<div class="empty">No languages found.</div>';
+      return;
+    }
+    console.log(data.langs);
+    main.innerHTML = '<h2>IPA Rulesets</h2>' + data.langs.map(l =>
+      `<h3 class="page-link"><a href="/phono/ipa/${esc(l.code)}">${esc(l.name_en)} (${esc(l.code)})</a></h3>`
+    ).join('');
+    // back button to home page
+    const backBtn = document.getElementById('back-btn');
+    backBtn.onclick = () => { window.location.href = '/'; };
+  }
 
   async function load() {
     const res = await fetch(`/api/langs/${lang}`);
@@ -63,11 +89,7 @@
     }
   }
 
-  function esc(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  load();
+  isIndex ? loadIndex() : load();
 </script>
 </body>
 </html>
