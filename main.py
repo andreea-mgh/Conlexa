@@ -180,6 +180,7 @@ def apply_phonology(
         result = apply_ruleset(ruleset, word)
         return {"result": result}
     except Exception as e:
+        print(f"Error applying IPA rules for language {lang_code} on word '{word}': {str(e)}")  # Debug log
         raise HTTPException(status_code=500, detail=f"Error applying IPA rules: {str(e)}")
 
 

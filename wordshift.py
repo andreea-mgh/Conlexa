@@ -69,56 +69,57 @@ def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, ve
                 input_words[i] = word.replace(substitution[0], substitution[1])
     
     ## POST RULES
-    for post_rule in ruleset["POST"]:
-        P1 = post_rule[0]
-        P2 = post_rule[1]
-        if len(post_rule) > 2:
-            context = post_rule[2]
-            if len(post_rule) > 3:
-                exceptions = post_rule[3]
+    if "POST" in ruleset:
+        for post_rule in ruleset["POST"]:
+            P1 = post_rule[0]
+            P2 = post_rule[1]
+            if len(post_rule) > 2:
+                context = post_rule[2]
+                if len(post_rule) > 3:
+                    exceptions = post_rule[3]
+                else:
+                    exceptions = None
             else:
+                context = None
                 exceptions = None
-        else:
-            context = None
-            exceptions = None
-        if verbose_rules:
-            print(f"Applying post rule: {P1} -> {P2} in context {context} with exceptions {exceptions}")
+            if verbose_rules:
+                print(f"Applying post rule: {P1} -> {P2} in context {context} with exceptions {exceptions}")
 
-        ## TODO: word boundary context %
-        ## TODO: implement exceptions
+            ## TODO: word boundary context %
+            ## TODO: implement exceptions
 
-        S1 = expand_string(P1, groups, verbose=verbose_expansion)
-        S2 = expand_string(P2, groups, verbose=verbose_expansion)
-        C = expand_string(context, groups, verbose=verbose_expansion) if context else None
-        
-        if C:
-            SS1 = []
-            SS2 = []
-            for c in C:
-                if '_' not in c:
-                    # print(f"ERROR in {post_rule}: Context pattern must include an underscore: {c}")
-                    raise ValueError(f"Context pattern must include an underscore: {c}")
-                    
-                left, right = c.split('_')
-                SS1.extend([left + s + right for s in S1])
-                SS2.extend([left + s + right for s in S2])
-            S1 = SS1
-            S2 = SS2
-
-        if len(S1) != len(S2):
-            # print(f"ERROR in {post_rule}: Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
-            raise ValueError(f"Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
+            S1 = expand_string(P1, groups, verbose=verbose_expansion)
+            S2 = expand_string(P2, groups, verbose=verbose_expansion)
+            C = expand_string(context, groups, verbose=verbose_expansion) if context else None
             
+            if C:
+                SS1 = []
+                SS2 = []
+                for c in C:
+                    if '_' not in c:
+                        # print(f"ERROR in {post_rule}: Context pattern must include an underscore: {c}")
+                        raise ValueError(f"Context pattern must include an underscore: {c}")
+                        
+                    left, right = c.split('_')
+                    SS1.extend([left + s + right for s in S1])
+                    SS2.extend([left + s + right for s in S2])
+                S1 = SS1
+                S2 = SS2
 
-        if verbose_rules:
-            for i, (s1, s2) in enumerate(zip(S1, S2)):
-                print(f"  Rule {i}: {s1} -> {s2}")
+            if len(S1) != len(S2):
+                # print(f"ERROR in {post_rule}: Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
+                raise ValueError(f"Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
+                
 
-        for s1, s2 in zip(S1, S2):
-            for i, word in enumerate(input_words):
-                word = '%' + word + '%' # for word boundary context
-                word = word.replace(s1, s2)
-                input_words[i] = word[1:-1]
+            if verbose_rules:
+                for i, (s1, s2) in enumerate(zip(S1, S2)):
+                    print(f"  Rule {i}: {s1} -> {s2}")
+
+            for s1, s2 in zip(S1, S2):
+                for i, word in enumerate(input_words):
+                    word = '%' + word + '%' # for word boundary context
+                    word = word.replace(s1, s2)
+                    input_words[i] = word[1:-1]
         
 
     return input_words
