@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Conlexa</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
@@ -56,7 +55,7 @@
       <div class="word-header">
         <div class="word-heading-row">
           <h2 class="word-heading">${esc(w.word)}</h2>
-          <span id="ipa-result" style="font-size:1rem;color:var(--text-dim)"></span>
+          <span id="ipa-result"></span>
           ${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}
         </div>
         ${w.pos ? `<div><span class="pos-badge">${esc(w.pos)}</span>${w.class ? ` <span class="etymology">${esc(w.class)}</span>` : ''}</div>` : ''}
@@ -88,7 +87,7 @@
   async function loadIPA(word, lang_code) {
     const params = new URLSearchParams({ word, lang_code });
     const res = await fetch(`/api/phonology/apply?${params}`);
-    if (!res.ok) return;
+    if (!res.ok) { console.log("Failed to load IPA: ", res); return;}
     const { result } = await res.json();
     const el = document.getElementById('ipa-result');
     if (el) el.textContent = `/${result}/`;
