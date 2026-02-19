@@ -56,6 +56,7 @@
       <div style="padding-bottom:2rem;margin-bottom:2rem;border-bottom:1px solid var(--border)">
         <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
           <h2 style="font-family:var(--serif);font-size:2.8rem;font-weight:400;color:var(--text)">${esc(w.word)}</h2>
+          <span id="ipa-result" style="font-family:var(--mono);font-size:1rem;color:var(--text-dim)"></span>
           ${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}
         </div>
         ${w.pos ? `<div><span class="pos-badge">${esc(w.pos)}</span>${w.class ? ` <span class="etymology">${esc(w.class)}</span>` : ''}</div>` : ''}
@@ -81,6 +82,16 @@
         <div style="font-size:14px;font-style:italic;color:var(--text-dim)">${esc(w.example)}</div>
       </div>` : ''}
     `;
+    if (w.language_code) loadIPA(w.word, w.language_code);
+  }
+
+  async function loadIPA(word, lang_code) {
+    const params = new URLSearchParams({ word, lang_code });
+    const res = await fetch(`/api/phonology/apply?${params}`);
+    if (!res.ok) return;
+    const { result } = await res.json();
+    const el = document.getElementById('ipa-result');
+    if (el) el.textContent = `[${result}]`;
   }
 
   async function deleteWord() {

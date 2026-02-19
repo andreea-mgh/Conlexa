@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IPA Ruleset ⋄ Conlexa</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/style.css"/>
+<style>
+  .layout { min-height: calc(100vh - 89px); }
+  main { display: flex; flex-direction: column; }
+  #ruleset { flex: 1; min-height: 400px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><a href="/" class="entry-link">Conlexa</a></h1>
+  <span class="subtitle" id="lang-label">IPA Ruleset</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <a href="/dictionary" class="reset-btn" style="display:block;text-align:center;text-decoration:none">← Back</a>
+  </aside>
+
+  <main id="main" style="padding:2rem 3rem;gap:1rem">
+    <div class="loading">Loading</div>
+  </main>
+</div>
+
+<script>
+  const lang = window.location.pathname.split('/').pop().toUpperCase();
+
+  async function load() {
+    const res = await fetch(`/api/langs/${lang}`);
+    const main = document.getElementById('main');
+    if (!res.ok) {
+      main.innerHTML = '<div class="empty">Language not found.</div>';
+      return;
+    }
+    const data = await res.json();
+    document.title = `IPA Ruleset: ${data.code} ⋄ Conlexa`;
+    document.getElementById('lang-label').textContent = `IPA Ruleset — ${data.code}`;
+    main.innerHTML = `
+      <textarea id="ruleset" class="edit-field" spellcheck="false">${esc(data.ipa_ruleset || '')}</textarea>
+      <div style="display:flex;gap:0.75rem">
+        <button class="reset-btn" id="save-btn" onclick="save()" style="color:var(--accent);border-color:var(--accent-dim)">Save</button>
+      </div>
+    `;
+  }
+
+  async function save() {
+    const btn = document.getElementById('save-btn');
+    btn.textContent = 'Saving…';
+    btn.disabled = true;
+    const res = await fetch(`/api/langs/${lang}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ipa_ruleset: document.getElementById('ruleset').value }),
+    });
+    btn.disabled = false;
+    if (res.ok) {
+      btn.textContent = 'Saved';
+      setTimeout(() => { btn.textContent = 'Save'; }, 1500);
+    } else {
+      btn.textContent = 'Save';
+      alert('Save failed. Please try again.');
+    }
+  }
+
+  function esc(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  load();
+</script>
+</body>
+</html>

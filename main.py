@@ -7,6 +7,8 @@ import psycopg2.extras
 import os
 from typing import Any
 
+from wordshift import apply_ruleset
+
 app = FastAPI()
 
 app.add_middleware(
@@ -124,6 +126,60 @@ def create_word(body: dict[str, Any] = Body(...)):
     return {"id": new_id}
 
 
+@app.get("/api/langs/{lang_code}")
+def get_lang(lang_code: str):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT code, ipa_ruleset FROM langs WHERE code = %s", (lang_code,))
+            row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Language not found")
+    return dict(row)
+
+
+@app.put("/api/langs/{lang_code}")
+def update_lang(lang_code: str, body: dict[str, Any] = Body(...)):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE langs SET ipa_ruleset = %s WHERE code = %s",
+                (body.get("ipa_ruleset"), lang_code),
+            )
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Language not found")
+    return {"ok": True}
+
+
+@app.get("/api/filters")
+def get_filters():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT code FROM parts_of_speech WHERE code IS NOT NULL ORDER BY 1")
+            parts = [r[0] for r in cur.fetchall()]
+            cur.execute("SELECT code FROM langs WHERE code IS NOT NULL ORDER BY 1")
+            langs = [r[0] for r in cur.fetchall()]
+    return {"parts_of_speech": parts, "language_codes": langs}
+
+
+@app.get("/api/phonology/apply")
+def apply_phonology(
+    word: str = Query(...),
+    lang_code: str = Query(...),
+):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT ipa_ruleset FROM langs WHERE code = %s", (lang_code,))
+            row = cur.fetchone()
+            # print("Fetched ruleset for language:", lang_code, row)  # Debug log
+    if row is None:
+        raise HTTPException(status_code=404, detail="Language not found")
+    ruleset = row[0]
+    if not ruleset:
+        raise HTTPException(status_code=400, detail="No IPA ruleset for this language")
+    result = apply_ruleset(ruleset, word)
+    return {"result": result}
+
+
 @app.get("/add")
 def add_page():
     return FileResponse("site/add.html")
@@ -138,17 +194,9 @@ def dictionary():
 def word_page(word_id: int):
     return FileResponse("site/word.html")
 
-
-@app.get("/api/filters")
-def get_filters():
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT code FROM parts_of_speech WHERE code IS NOT NULL ORDER BY 1")
-            parts = [r[0] for r in cur.fetchall()]
-            cur.execute("SELECT code FROM langs WHERE code IS NOT NULL ORDER BY 1")
-            langs = [r[0] for r in cur.fetchall()]
-    return {"parts_of_speech": parts, "language_codes": langs}
-
+@app.get("/phono/ipa/{lang_code}")
+def ipa_page(lang_code: str):
+    return FileResponse("site/ipa.html")
 
 # Serve frontend
 app.mount("/", StaticFiles(directory="site", html=True), name="static")
