@@ -176,8 +176,11 @@ def apply_phonology(
     ruleset = row[0]
     if not ruleset:
         raise HTTPException(status_code=400, detail="No IPA ruleset for this language")
-    result = apply_ruleset(ruleset, word)
-    return {"result": result}
+    try:
+        result = apply_ruleset(ruleset, word)
+        return {"result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error applying IPA rules: {str(e)}")
 
 
 @app.get("/add")

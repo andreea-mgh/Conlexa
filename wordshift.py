@@ -96,8 +96,9 @@ def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, ve
             SS2 = []
             for c in C:
                 if '_' not in c:
-                    print(f"ERROR in {post_rule}: Context pattern must include an underscore: {c}")
-                    continue
+                    # print(f"ERROR in {post_rule}: Context pattern must include an underscore: {c}")
+                    raise ValueError(f"Context pattern must include an underscore: {c}")
+                    
                 left, right = c.split('_')
                 SS1.extend([left + s + right for s in S1])
                 SS2.extend([left + s + right for s in S2])
@@ -105,8 +106,9 @@ def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, ve
             S2 = SS2
 
         if len(S1) != len(S2):
-            print(f"ERROR in {post_rule}: Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
-            continue
+            # print(f"ERROR in {post_rule}: Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
+            raise ValueError(f"Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
+            
 
         if verbose_rules:
             for i, (s1, s2) in enumerate(zip(S1, S2)):
