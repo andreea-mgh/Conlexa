@@ -16,9 +16,9 @@
 
 <div class="layout">
   <aside>
-    <a href="/dictionary" class="reset-btn" style="display:block;text-align:center;text-decoration:none">← Back</a>
+    <button class="reset-btn" onclick="window.location.href='/dictionary'">← Back</button>
     <button class="reset-btn" id="edit-btn" onclick="startEdit()" style="display:none">Edit</button>
-    <button class="reset-btn" id="delete-btn" onclick="deleteWord()" style="display:none;color:var(--text-dim);border-color:var(--border)">Delete</button>
+    <button class="reset-btn" id="delete-btn" onclick="deleteWord()" style="display:none">Delete</button>
   </aside>
 
   <main id="content">
@@ -53,32 +53,32 @@
     document.getElementById('edit-btn').style.display = '';
     document.getElementById('delete-btn').style.display = '';
     document.getElementById('content').innerHTML = `
-      <div style="padding-bottom:2rem;margin-bottom:2rem;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
-          <h2 style="font-family:var(--serif);font-size:2.8rem;font-weight:400;color:var(--text)">${esc(w.word)}</h2>
-          <span id="ipa-result" style="font-family:var(--mono);font-size:1rem;color:var(--text-dim)"></span>
+      <div class="word-header">
+        <div class="word-heading-row">
+          <h2 class="word-heading">${esc(w.word)}</h2>
+          <span id="ipa-result" style="font-size:1rem;color:var(--text-dim)"></span>
           ${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}
         </div>
         ${w.pos ? `<div><span class="pos-badge">${esc(w.pos)}</span>${w.class ? ` <span class="etymology">${esc(w.class)}</span>` : ''}</div>` : ''}
       </div>
       ${w.def_en ? `
-      <div style="margin-bottom:2rem">
-        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:.75rem">Definition</div>
+      <div class="section-block">
+        <div class="section-label">Definition</div>
         <div class="definition" style="font-size:1rem;max-width:none">${esc(w.def_en)}</div>
       </div>` : ''}
       ${w.etymology ? `
-      <div style="margin-bottom:2rem">
-        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:.75rem">Etymology</div>
+      <div class="section-block">
+        <div class="section-label">Etymology</div>
         <div class="etymology" style="font-size:14px">${esc(w.etymology)}</div>
       </div>` : ''}
       ${w.tags && w.tags.length > 0 ? `
-      <div style="margin-bottom:2rem">
-        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:.75rem">Tags</div>
+      <div class="section-block">
+        <div class="section-label">Tags</div>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap">${w.tags.map(t => `<span class="lang-badge">${esc(t)}</span>`).join('')}</div>
       </div>` : ''}
       ${w.example ? `
       <div>
-        <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:.75rem">Example</div>
+        <div class="section-label">Example</div>
         <div style="font-size:14px;font-style:italic;color:var(--text-dim)">${esc(w.example)}</div>
       </div>` : ''}
     `;
@@ -146,8 +146,8 @@
           <label>Tags (comma-separated)</label>
           <input name="tags" class="edit-field" type="text" value="${esc((w.tags || []).join(', '))}">
         </div>
-        <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
-          <button type="submit" class="reset-btn" style="color:var(--accent);border-color:var(--accent-dim)">Save</button>
+        <div class="form-actions">
+          <button type="submit" class="reset-btn reset-btn-accent">Save</button>
           <button type="button" class="reset-btn" onclick="renderView(wordData)">Cancel</button>
         </div>
       </form>

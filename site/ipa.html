@@ -6,11 +6,6 @@
 <title>IPA Ruleset ⋄ Conlexa</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/style.css"/>
-<style>
-  .layout { min-height: calc(100vh - 89px); }
-  main { display: flex; flex-direction: column; }
-  #ruleset { flex: 1; min-height: 400px; }
-</style>
 </head>
 <body>
 
@@ -21,10 +16,10 @@
 
 <div class="layout">
   <aside>
-    <a href="/dictionary" class="reset-btn" style="display:block;text-align:center;text-decoration:none">← Back</a>
+    <button class="reset-btn" onclick="window.location.href='/dictionary'">← Back</button>
   </aside>
 
-  <main id="main" style="padding:2rem 3rem;gap:1rem">
+  <main id="main" class="main-flex">
     <div class="loading">Loading</div>
   </main>
 </div>
@@ -43,9 +38,9 @@
     document.title = `IPA Ruleset: ${data.code} ⋄ Conlexa`;
     document.getElementById('lang-label').textContent = `IPA Ruleset — ${data.code}`;
     main.innerHTML = `
-      <textarea id="ruleset" class="edit-field" spellcheck="false">${esc(data.ipa_ruleset || '')}</textarea>
-      <div style="display:flex;gap:0.75rem">
-        <button class="reset-btn" id="save-btn" onclick="save()" style="color:var(--accent);border-color:var(--accent-dim)">Save</button>
+      <textarea id="ruleset" class="edit-field" spellcheck="false" style="flex:1;min-height:400px">${esc(data.ipa_ruleset || '')}</textarea>
+      <div class="form-actions">
+        <button class="reset-btn reset-btn-accent" id="save-btn" onclick="save()">Save</button>
       </div>
     `;
   }
