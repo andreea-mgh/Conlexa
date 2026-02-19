@@ -17,6 +17,25 @@ body {
   min-height: 100vh;
 }
 
+p {
+  margin-bottom: 1rem;
+  color: var(--text-dim);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-dim);
+}
+
+em{
+  font-style: normal;
+  color: var(--accent-dim);
+}
+
 header {
   border-bottom: 1px solid var(--border);
   padding: 2rem 3rem;
@@ -50,9 +69,25 @@ h2 {
 h3 {
   font-family: var(--serif);
   font-weight: 400;
-  color: var(--accent-dim);
+  color: var(--accent);
   margin-bottom: 0.75rem;
-  font-size: 1.8em;
+  font-size: 2em;
+}
+
+h4 {
+  font-family: var(--serif);
+  font-weight: 400;
+  color: var(--accent-dim);
+  margin-bottom: 0.5rem;
+  font-size: 1.6em;
+}
+
+h5 {
+  font-family: var(--serif);
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+  font-size: 1.4em;
 }
 
 .layout {
@@ -396,4 +431,45 @@ a.entry-link:hover {
   font-size:1rem;
   color:var(--text-dim);
   font-family: var(--ipa);
+}
+
+
+pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+code {
+  background: var(--border);
+  border: 1px solid var(--border);
+  /* border-radius: 0.1rem; */
+  padding: 0.05rem 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.95em;
+}
+
+pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.info-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dimmer);
+  font-family: var(--mono);
+  font-size: 10px;
+  width: 2em;
+  height: 2em;
+  display: inline-flex;
+  padding: 0.3rem;
+  margin-left: 1rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
 }

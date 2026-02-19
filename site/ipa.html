@@ -44,7 +44,7 @@
       return;
     }
     console.log(data.langs);
-    main.innerHTML = '<h2>IPA Rulesets</h2>' + data.langs.map(l =>
+    main.innerHTML = '<h2>IPA Rulesets<button class="info-button" onclick="window.open(\'/ipa_doc.html\', \'_blank\')">?</button></h2>' + data.langs.map(l =>
       `<h3 class="page-link"><a href="/phono/ipa/${esc(l.code)}">${esc(l.name_en)} (${esc(l.code)})</a></h3>`
     ).join('');
     // back button to home page
