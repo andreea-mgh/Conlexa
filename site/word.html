@@ -91,7 +91,7 @@
     if (!res.ok) return;
     const { result } = await res.json();
     const el = document.getElementById('ipa-result');
-    if (el) el.textContent = `[${result}]`;
+    if (el) el.textContent = `/${result}/`;
   }
 
   async function deleteWord() {
