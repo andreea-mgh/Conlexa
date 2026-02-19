@@ -96,12 +96,17 @@ def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, ve
             if verbose_rules:
                 print(f"Applying post rule: {P1} -> {P2} in context {context} with exceptions {exceptions}")
 
-            ## TODO: word boundary context %
             ## TODO: implement exceptions
 
             S1 = expand_string(P1, groups, verbose=verbose_expansion)
             S2 = expand_string(P2, groups, verbose=verbose_expansion)
             C = expand_string(context, groups, verbose=verbose_expansion) if context else None
+            
+            if len(S1) != len(S2) and len(S2) != 1:
+                # print(f"ERROR in {post_rule}: Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
+                raise ValueError(f"Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
+            elif len(S2) == 1:
+                S2 = S2 * len(S1)
             
             if C:
                 SS1 = []
@@ -117,9 +122,6 @@ def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, ve
                 S1 = SS1
                 S2 = SS2
 
-            if len(S1) != len(S2):
-                # print(f"ERROR in {post_rule}: Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
-                raise ValueError(f"Expanded patterns have different lengths: {len(S1)} vs {len(S2)}")
                 
 
             if verbose_rules:
