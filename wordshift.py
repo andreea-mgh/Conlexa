@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 DIR = Path(__file__).resolve().parent
 
@@ -63,10 +64,20 @@ def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, ve
     ## TODO: pre-substitution rules ?
     
     ## SUBSTITUTION
+    ## TODO: substitution stage won't substitute the same thing twice
+    # if "SUBST" in ruleset:
+    #     for substitution in ruleset["SUBST"]:
+    #         for i, word in enumerate(input_words):
+    #             input_words[i] = word.replace(substitution[0], substitution[1])
     if "SUBST" in ruleset:
+        pairs = {}
         for substitution in ruleset["SUBST"]:
-            for i, word in enumerate(input_words):
-                input_words[i] = word.replace(substitution[0], substitution[1])
+            pairs[substitution[0]] = substitution[1]
+        pattern = re.compile("|".join(re.escape(k) for k in pairs.keys()))
+        def replacer(match):
+            return pairs[match.group(0)]
+        for i, word in enumerate(input_words):
+            input_words[i] = pattern.sub(replacer, word)
     
     ## POST RULES
     if "POST" in ruleset:
