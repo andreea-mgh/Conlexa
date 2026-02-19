@@ -209,6 +209,9 @@ def word_page(word_id: int):
 def ipa_index():
     return FileResponse("site/ipa.html")
 
+@app.get("/phono/ipa/documentation")
+def ipa_docs():
+    return FileResponse("site/ipa_doc.html")
 
 @app.get("/phono/ipa/{lang_code}")
 def ipa_page(lang_code: str):
