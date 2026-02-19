@@ -3,6 +3,9 @@ import re
 
 DIR = Path(__file__).resolve().parent
 
+LOGGING = False
+
+LOG_FILE = DIR / "logs.txt"
 
 ## 0. define groups
 ## 1. substitute presubstitution rules
@@ -28,12 +31,18 @@ def expand_string(pattern, groups, verbose=False):
                 result.append(item + rest_exp)
         if verbose:
             print(f"Expanding group {first_char}: {group_items} -> {result}")
+        if LOGGING:
+            with open(LOG_FILE, "a") as log_f:
+                log_f.write(f"Expanding group {first_char}: {group_items} -> {result}\n")
         return result
     else:
         # Regular character, just append to all expansions of the rest
         rest_expansions = expand_string(rest, groups, verbose=verbose)
         if verbose:
             print(f"Expanding character {first_char}: {rest_expansions}")
+        if LOGGING:
+            with open(LOG_FILE, "a") as log_f:
+                log_f.write(f"Expanding character {first_char}: {rest_expansions}\n")
         return [first_char + exp for exp in rest_expansions]
 
 def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, verbose_rules=False):
@@ -60,6 +69,9 @@ def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, ve
             groups[group[0]] = group[1].split(',')
             if verbose_rules:
                 print(f"Defined group {group[0]}: {groups[group[0]]}")
+            if LOGGING:
+                with open(LOG_FILE, "a") as log_f:
+                    log_f.write(f"Defined group {group[0]}: {groups[group[0]]}\n")
     
     ## TODO: pre-substitution rules ?
     
@@ -91,6 +103,9 @@ def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, ve
                 exceptions = None
             if verbose_rules:
                 print(f"Applying post rule: {P1} -> {P2} in context {context} with exceptions {exceptions}")
+            if LOGGING:
+                with open(LOG_FILE, "a") as log_f:
+                    log_f.write(f"Applying post rule: {P1} -> {P2} in context {context} with exceptions {exceptions}\n")
 
             ## TODO: implement exceptions
 
@@ -123,6 +138,11 @@ def apply_ruleset_bulk(ruleset_content, input_words, verbose_expansion=False, ve
             if verbose_rules:
                 for i, (s1, s2) in enumerate(zip(S1, S2)):
                     print(f"  Rule {i}: {s1} -> {s2}")
+            
+            if LOGGING:
+                for i, (s1, s2) in enumerate(zip(S1, S2)):
+                    with open(LOG_FILE, "a") as log_f:
+                        log_f.write(f"  Rule {i}: {s1} -> {s2}\n")
 
             for s1, s2 in zip(S1, S2):
                 for i, word in enumerate(input_words):
