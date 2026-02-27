@@ -15,6 +15,9 @@
 - [ ] Languages
   - [ ] Add language and code
   - [ ] Language presentation and page
+    - [ ] Flag
+    - [ ] Description
+    - [x] Parts of speech
 - [x] IPA auto-guesser
   - [ ] Add wordshift playground for testing
 - [ ] Conjugator
