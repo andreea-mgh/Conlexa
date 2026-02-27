@@ -215,6 +215,28 @@ def get_filters():
             langs = [r[0] for r in cur.fetchall()]
     return {"parts_of_speech": parts, "language_codes": langs}
 
+@app.get("/api/default/lang")
+def get_default_lang():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT language_code, COUNT(*) as word_count 
+                FROM words 
+                WHERE language_code IS NOT NULL 
+                GROUP BY language_code 
+                ORDER BY word_count DESC 
+                LIMIT 1
+            """)
+            row = cur.fetchone()
+            if row:
+                return {"language_code": row[0], "word_count": row[1]}
+            # If no words, return the first language alphabetically
+            cur.execute("SELECT code FROM langs ORDER BY code LIMIT 1")
+            first_lang = cur.fetchone()
+            if first_lang:
+                return {"language_code": first_lang[0], "word_count": 0}
+            return {"language_code": None, "word_count": 0}
+
 
 @app.get("/api/phonology/apply")
 def apply_phonology(

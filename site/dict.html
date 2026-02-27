@@ -51,24 +51,49 @@
   let currentPage = 0;
   let totalWords = 0;
 
-  async function loadFilters() {
-    const res = await fetch('/api/filters');
-    const data = await res.json();
-
-    const posSelect = document.getElementById('pos-filter');
-    data.parts_of_speech.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p; opt.textContent = p;
-      posSelect.appendChild(opt);
-    });
-
+  async function loadLanguages(defaultLangCode = '') {
     const langSelect = document.getElementById('lang-filter');
-    if (data.language_codes.length > 0) {
+    const res = await fetch('/api/langs');
+    if (!res.ok) return;
+    
+    const data = await res.json();
+    if (data.langs && data.langs.length > 0) {
       langSelect.innerHTML = '';
-      data.language_codes.forEach(l => {
+      data.langs.forEach(l => {
         const opt = document.createElement('option');
-        opt.value = l; opt.textContent = l.toUpperCase();
+        opt.value = l.code;
+        opt.textContent = l.code.toUpperCase() + (l.name_en ? ` - ${l.name_en}` : '');
         langSelect.appendChild(opt);
+      });
+      // Select default language if provided and exists
+      if (defaultLangCode) {
+        langSelect.value = defaultLangCode;
+      }
+    }
+  }
+
+  async function loadPartsOfSpeech(langCode) {
+    const posSelect = document.getElementById('pos-filter');
+    // Clear existing options except "all" and reset value
+    while (posSelect.options.length > 1) {
+      posSelect.remove(1);
+    }
+    posSelect.value = '';
+    
+    if (!langCode) {
+      return;
+    }
+    
+    const res = await fetch(`/api/langs/${encodeURIComponent(langCode)}`);
+    if (!res.ok) return;
+    
+    const langData = await res.json();
+    if (langData.parts_of_speech && langData.parts_of_speech.length > 0) {
+      langData.parts_of_speech.forEach(pos => {
+        const opt = document.createElement('option');
+        opt.value = pos.code;
+        opt.textContent = pos.code;
+        posSelect.appendChild(opt);
       });
     }
   }
@@ -174,9 +199,10 @@
     pag.appendChild(info);
   }
 
-  function resetFilters() {
+  async function resetFilters() {
     document.getElementById('pos-filter').value = '';
     document.getElementById('lang-filter').value = '';
+    await loadPartsOfSpeech('');
     currentPage = 0;
     loadWords();
   }
@@ -187,10 +213,37 @@
   }
 
   document.getElementById('pos-filter').addEventListener('change', () => { currentPage = 0; loadWords(); });
-  document.getElementById('lang-filter').addEventListener('change', () => { currentPage = 0; loadWords(); });
+  document.getElementById('lang-filter').addEventListener('change', async () => { 
+    const langCode = document.getElementById('lang-filter').value;
+    await loadPartsOfSpeech(langCode);
+    currentPage = 0; 
+    loadWords(); 
+  });
 
-  loadFilters();
-  loadWords();
+  async function initializePage() {
+    // Get default language (language with most words)
+    const defaultRes = await fetch('/api/default/lang');
+    let defaultLangCode = '';
+    if (defaultRes.ok) {
+      const defaultData = await defaultRes.json();
+      if (defaultData.language_code) {
+        defaultLangCode = defaultData.language_code;
+      }
+    }
+    
+    // Load languages with default selection
+    await loadLanguages(defaultLangCode);
+    
+    // Load parts of speech for default language if set
+    if (defaultLangCode) {
+      await loadPartsOfSpeech(defaultLangCode);
+    }
+    
+    // Load words with current filters (which may include the default language)
+    loadWords();
+  }
+
+  initializePage();
 </script>
 </body>
 </html>
