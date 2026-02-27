@@ -63,7 +63,7 @@
         <div class="section-block">
           <div class="section-label">Parts of Speech</div>
           <ul class="list-block">
-            ${lang.parts_of_speech.map(pos => `<li><span class="pos-badge">${esc(pos.code)}</span> ${esc(pos.name_en)}</li>`).join('')}
+          ${lang.parts_of_speech.map(pos => `<li><span class="pos-badge">${esc(pos.code)}</span> <span class="pos-name">${esc(pos.name_en)}</span> <button class="delete-button" onclick="deletePartOfSpeech('${lang.code}', '${pos.code}')">delete</button></li>`).join('')}
           </ul>
           <div id="add-pos-section" class="inline-inputs" style="display:none; margin-top: 1rem;">
           <input type="text" id="new-pos-code" placeholder="CODE" class="edit-field" style="width:10em;flex-grow:unset" maxlength="10"/>
@@ -100,6 +100,20 @@
     });
     if (!res.ok) {
       alert('Failed to add part of speech.');
+      return;
+    }
+    // reload language details
+    loadLangDetail(langCode);
+  }
+
+  async function deletePartOfSpeech(langCode, posCode) {
+    if (!confirm(`Are you sure you want to delete part of speech "${posCode}"?`)) return;
+    const res = await fetch(`/api/langs/${encodeURIComponent(langCode)}/parts_of_speech/${encodeURIComponent(posCode)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const detail = (await res.json()).detail || `Status code: ${res.status}`;
+      alert(`Failed to delete part of speech. ${detail}`);
       return;
     }
     // reload language details
