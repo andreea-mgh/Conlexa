@@ -497,7 +497,7 @@ pre code {
   border: 1px solid var(--border);
   color: var(--text-dimmer);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 0.8rem;
   width: 2em;
   height: 2em;
   display: inline-flex;
@@ -522,6 +522,13 @@ ul.list-block li {
   color: var(--text);
   border: 1px solid var(--border);
   margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+ul.list-block li .pos-name {
+  flex-grow: 1;
 }
 
 /* .inline-submit-btn {
@@ -535,3 +542,24 @@ ul.list-block li {
   transition: background-color 0.2s;
   flex: 1;
 } */
+
+.delete-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  height: 2em;
+  display: inline-flex;
+  padding: 0.3rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin-left: auto;
+}
+
+.delete-button:hover {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}

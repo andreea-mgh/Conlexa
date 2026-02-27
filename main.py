@@ -196,7 +196,7 @@ def delete_part_of_speech(lang_code: str, pos_code: str):
                 (lang_code, pos_code),
             )
             if cur.fetchone() is not None:
-                raise HTTPException(status_code=400, detail="Part of speech is in use by existing words")
+                raise HTTPException(status_code=400, detail="Part of speech is in use by existing words.")
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
