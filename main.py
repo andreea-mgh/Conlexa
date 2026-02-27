@@ -137,7 +137,7 @@ def get_langs():
 def get_lang(lang_code: str):
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT code, ipa_ruleset FROM langs WHERE code = %s", (lang_code,))
+            cur.execute("SELECT code, name_en, name_native, ipa_ruleset FROM langs WHERE code = %s", (lang_code,))
             row = cur.fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Language not found")
@@ -216,6 +216,10 @@ def ipa_docs():
 @app.get("/phono/ipa/{lang_code}")
 def ipa_page(lang_code: str):
     return FileResponse("site/ipa.html")
+
+@app.get("/langs")
+def lang_index():
+    return FileResponse("site/langs.html")
 
 # Serve frontend
 app.mount("/", StaticFiles(directory="site", html=True), name="static")

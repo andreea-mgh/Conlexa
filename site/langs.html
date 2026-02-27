@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IPA Ruleset ⋄ Conlexa</title>
+<link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+<header>
+  <h1><a href="/" class="entry-link">Conlexa</a></h1>
+  <span class="subtitle" id="lang-label">Languages</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <button class="reset-btn" id="back-btn" onclick="window.location.href='/'">← Back</button>
+  </aside>
+
+  <main id="main" class="main-flex">
+    <div class="loading">Loading</div>
+  </main>
+</div>
+
+<script>
+  function esc(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function getQueryParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+  }
+
+  async function loadLangDetail(code) {
+    const main = document.getElementById('main');
+    const label = document.getElementById('lang-label');
+    if (label) label.textContent = 'Language Details';
+    
+    const res = await fetch(`/api/langs/${encodeURIComponent(code)}`);
+    if (!res.ok) {
+      main.innerHTML = `<div class="empty">Language "${esc(code)}" not found.</div>`;
+      return;
+    }
+    const lang = await res.json();
+    renderLangDetail(lang);
+  }
+
+  function renderLangDetail(lang) {
+    const main = document.getElementById('main');
+    main.innerHTML = `
+      <div class="word-header">
+        <div class="word-heading-row">
+          <h2 class="word-heading">${esc(lang.name_en)}</h2>
+          <span class="lang-badge">${esc(lang.code)}</span>
+        </div>
+        ${lang.name_native ? `<div class="section-block">
+          <div class="section-label">Native Name</div>
+          <div class="definition">${esc(lang.name_native)}</div>
+        </div>` : ''}
+        ${lang.ipa_ruleset ? `<div class="section-block">
+          <div class="section-label">IPA Ruleset</div>
+          <pre style="font-family: var(--mono); font-size: 13px; background: var(--bg-dim); padding: 1rem; border-radius: 4px; overflow-x: auto; white-space: pre-wrap;">${esc(lang.ipa_ruleset)}</pre>
+        </div>` : ''}
+      </div>
+    `;
+  }
+
+  async function loadLangs() {
+    const main = document.getElementById('main');
+    const label = document.getElementById('lang-label');
+    if (label) label.textContent = 'Languages';
+    
+    const res = await fetch('/api/langs');
+    if (!res.ok) { main.innerHTML = '<div class="empty">Failed to load languages.</div>'; return; }
+    const data = await res.json();
+
+    if (!data.langs || data.langs.length === 0) {
+      main.innerHTML = '<div class="empty">No languages found.</div>';
+      return;
+    }
+
+    main.innerHTML = data.langs.map(l =>
+      `<h3 class="page-link" onclick="window.location.href='?code=${encodeURIComponent(l.code)}'">
+        <span class="lang-badge">${esc(l.code)}</span> ${esc(l.name_en)}
+      </h3>`
+    ).join('');
+  }
+
+  const code = getQueryParam('code');
+  if (code) {
+    loadLangDetail(code);
+  } else {
+    loadLangs();
+  }
+</script>
+</body>
+</html>
