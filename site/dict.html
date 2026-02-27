@@ -62,7 +62,8 @@
       data.langs.forEach(l => {
         const opt = document.createElement('option');
         opt.value = l.code;
-        opt.textContent = l.code.toUpperCase() + (l.name_en ? ` - ${l.name_en}` : '');
+        // opt.textContent = l.code.toUpperCase() + (l.name_en ? ` - ${l.name_en}` : '');
+        opt.textContent = l.name_en ? l.name_en : l.code.toUpperCase();
         langSelect.appendChild(opt);
       });
       // Select default language if provided and exists

@@ -35,11 +35,52 @@
     if (res.ok) filtersData = await res.json();
   }
 
-  function makeSelect(name, options, current) {
+  async function getPartsOfSpeechForLanguage(langCode) {
+    if (!langCode) return [];
+    const res = await fetch(`/api/langs/${encodeURIComponent(langCode)}`);
+    if (!res.ok) return [];
+    const langData = await res.json();
+    return langData.parts_of_speech || [];
+  }
+
+  async function updatePartsOfSpeechSelect(langCode) {
+    const posSelect = document.querySelector('#edit-form select[name="pos"]');
+    if (!posSelect) return;
+    
+    const partsOfSpeech = await getPartsOfSpeechForLanguage(langCode);
+    const currentValue = posSelect.value;
+    
+    // Clear all existing options
+    posSelect.innerHTML = '';
+    
+    // Add blank option (since allowBlank is true for pos select)
+    const blankOpt = document.createElement('option');
+    blankOpt.value = '';
+    blankOpt.textContent = '—';
+    posSelect.appendChild(blankOpt);
+    
+    // Add new options
+    partsOfSpeech.forEach(pos => {
+      const opt = document.createElement('option');
+      opt.value = pos.code;
+      opt.textContent = pos.code;
+      posSelect.appendChild(opt);
+    });
+    
+    // Restore previous value if it exists in new options
+    if (currentValue && partsOfSpeech.some(pos => pos.code === currentValue)) {
+      posSelect.value = currentValue;
+    } else {
+      posSelect.value = '';
+    }
+  }
+
+  function makeSelect(name, options, current, allowBlank = true) {
     const opts = options.map(o =>
       `<option value="${esc(o)}"${o === current ? ' selected' : ''}>${esc(o)}</option>`
     ).join('');
-    return `<select name="${name}" class="edit-field"><option value="">—</option>${opts}</select>`;
+    
+    return `<select name="${name}" class="edit-field">${allowBlank ? '<option value="">—</option>' : ''}${opts}</select>`;
   }
 
   function esc(str) {
@@ -104,10 +145,15 @@
     }
   }
 
-  function startEdit() {
+  async function startEdit() {
     const w = wordData;
     document.getElementById('edit-btn').style.display = 'none';
     document.getElementById('delete-btn').style.display = 'none';
+    
+    // Get parts of speech for current language
+    const currentPartsOfSpeech = await getPartsOfSpeechForLanguage(w.language_code);
+    const posCodes = currentPartsOfSpeech.map(pos => pos.code);
+    
     document.getElementById('content').innerHTML = `
       <form id="edit-form">
         <div class="filter-group">
@@ -120,7 +166,7 @@
         </div>
         <div class="filter-group">
           <label>Part of Speech</label>
-          ${makeSelect('pos', filtersData.parts_of_speech, w.pos || '')}
+          ${makeSelect('pos', posCodes, w.pos || '', true)}
         </div>
         <div class="filter-group">
           <label>Class</label>
@@ -128,7 +174,7 @@
         </div>
         <div class="filter-group">
           <label>Language Code</label>
-          ${makeSelect('language_code', filtersData.language_codes, w.language_code || '')}
+          ${makeSelect('language_code', filtersData.language_codes, w.language_code || '', false)}
         </div>
         <div class="filter-group">
           <label>Definition</label>
@@ -152,7 +198,15 @@
         </div>
       </form>
     `;
-    document.getElementById('edit-form').addEventListener('submit', saveWord);
+    
+    const form = document.getElementById('edit-form');
+    form.addEventListener('submit', saveWord);
+    
+    // Add change listener to language select to update parts of speech
+    const langSelect = form.querySelector('select[name="language_code"]');
+    langSelect.addEventListener('change', async () => {
+      await updatePartsOfSpeechSelect(langSelect.value);
+    });
   }
 
   async function saveWord(e) {
