@@ -57,8 +57,9 @@
           <h2 class="word-heading">${esc(w.word)}</h2>
           <span id="ipa-result"></span>
           ${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}
+          ${w.pos ? `<div><span class="pos-badge">${esc(w.pos)}</span>${w.class ? ` <span class="etymology">${esc(w.class)}</span>` : ''}</div>` : ''}
         </div>
-        ${w.pos ? `<div><span class="pos-badge">${esc(w.pos)}</span>${w.class ? ` <span class="etymology">${esc(w.class)}</span>` : ''}</div>` : ''}
+        
       </div>
       ${w.def_en ? `
       <div class="section-block">
