@@ -136,9 +136,18 @@ def get_langs():
 @app.get("/api/langs/{lang_code}")
 def get_lang(lang_code: str):
     with get_conn() as conn:
+        # get lang details
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT code, name_en, name_native, ipa_ruleset FROM langs WHERE code = %s", (lang_code,))
+            cur.execute("SELECT code, name_en, ipa_ruleset FROM langs WHERE code = %s", (lang_code,))
             row = cur.fetchone()
+        # fetch associated parts of speech
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT code, name_en FROM parts_of_speech WHERE language_code = %s",
+                (lang_code,),
+            )
+            pos_rows = cur.fetchall()
+            row["parts_of_speech"] = [dict(r) for r in pos_rows]
     if row is None:
         raise HTTPException(status_code=404, detail="Language not found")
     return dict(row)
@@ -156,6 +165,45 @@ def update_lang(lang_code: str, body: dict[str, Any] = Body(...)):
                 raise HTTPException(status_code=404, detail="Language not found")
     return {"ok": True}
 
+@app.post("/api/langs/{lang_code}/parts_of_speech", status_code=201)
+def add_part_of_speech(lang_code: str, body: dict[str, Any] = Body(...)):
+    code = body.get("code")
+    name_en = body.get("name_en")
+    if not code or not name_en:
+        raise HTTPException(status_code=400, detail="'code' and 'name_en' are required")
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            # Check if language exists
+            cur.execute("SELECT 1 FROM langs WHERE code = %s", (lang_code,))
+            if cur.fetchone() is None:
+                raise HTTPException(status_code=404, detail="Language not found")
+            # Insert new part of speech
+            try:
+                cur.execute(
+                    "INSERT INTO parts_of_speech (language_code, code, name_en) VALUES (%s, %s, %s)",
+                    (lang_code, code, name_en),
+                )
+            except psycopg2.IntegrityError:
+                raise HTTPException(status_code=400, detail="Part of speech code already exists for this language")
+    return {"ok": True}
+
+@app.delete("/api/langs/{lang_code}/parts_of_speech/{pos_code}")
+def delete_part_of_speech(lang_code: str, pos_code: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM words WHERE language_code = %s AND pos = %s",
+                (lang_code, pos_code),
+            )
+            if cur.fetchone() is not None:
+                raise HTTPException(status_code=400, detail="Part of speech is in use by existing words")
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM parts_of_speech WHERE language_code = %s AND code = %s",
+                (lang_code, pos_code),
+            )
+    return {"ok": True}
 
 @app.get("/api/filters")
 def get_filters():

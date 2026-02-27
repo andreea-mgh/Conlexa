@@ -1,4 +1,4 @@
-@import url("./themes/atlantis.css");
+@import url("./themes/enchanted-forest.css");
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
 :root {
@@ -231,12 +231,16 @@ tbody td {
 
 .lang-badge {
   display: inline-block;
-  font-size: 10px;
+  font-family: var(--mono);
+  /* font-size: 10px; */
+  font-size: 0.8rem;
+  line-height: 1;
   letter-spacing: 0.1em;
-  padding: 2px 6px;
+  padding: 0.3em 0.5em;
   background: var(--border);
   color: var(--text-dim);
   text-transform: uppercase;
+  vertical-align: middle;
 }
 
 .definition {
@@ -353,7 +357,7 @@ tbody td {
 
 .word-heading-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
@@ -385,6 +389,37 @@ tbody td {
 
 #edit-form .form-actions {
   margin-top: 1.5rem;
+}
+
+.inline-inputs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.inline-submit-btn {
+  /* width: auto; */
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  /* flex-grow: 1; */
+}
+
+.inline-submit-btn:hover {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.inline-inputs .edit-field {
+  flex: 1 0 auto;
+  width: auto;
 }
 
 /* Layout variants */
@@ -473,3 +508,30 @@ pre code {
   justify-content: center;
   vertical-align: middle;
 }
+
+ul.list-block {
+  list-style: none;
+  /* padding: 0.5rem; */
+  /* color: var(--text); */
+  /* background-color: var(--surface); */
+  /* border: 1px solid var(--border); */
+}
+
+ul.list-block li {
+  padding: 0.5rem;
+  color: var(--text);
+  border: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+
+/* .inline-submit-btn {
+  background: var(--accent);
+  border: none;
+  color: white;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex: 1;
+} */
