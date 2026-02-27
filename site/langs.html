@@ -59,6 +59,8 @@
           <h2 class="word-heading">${esc(lang.name_en)}</h2>
           <span class="lang-badge">${esc(lang.code)}</span>
         </div>
+      </div>
+      <div class="word-detail">
         <h2>Grammar</h2>
         <div class="section-block">
           <div class="section-label">Parts of Speech</div>
@@ -72,10 +74,11 @@
           </div>
           <div style="color:var(--text-dim); font-size: 0.9em; margin-top: 0.5rem;"> <button class="info-button" onclick="showAddPartOfSpeech('${lang.code}')">+</button> Add part of speech</div>
         </div>
-        ${lang.ipa_ruleset ? `<div class="section-block">
+        <h2>Phonology</h2>
+        <div class="section-block">
           <div class="section-label">IPA Ruleset <a href="/phono/ipa/${lang.code}" target="_blank">(Edit)</a></div>
-          <pre class="edit-field">${esc(lang.ipa_ruleset)}</pre>
-        </div>` : ''}
+          ${lang.ipa_ruleset ? `<pre class="edit-field">${esc(lang.ipa_ruleset)}</pre>` : '<p class="empty" style="text-align:left;padding:0;">No IPA ruleset defined.</p>'}
+        </div> 
       </div>
     `;
   }
