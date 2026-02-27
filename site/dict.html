@@ -25,7 +25,7 @@
     <div class="filter-group">
       <label>Language</label>
       <select id="lang-filter">
-        <option value="">all</option>
+        <option value="">(no languages added)</option>
       </select>
     </div>
 
@@ -63,11 +63,14 @@
     });
 
     const langSelect = document.getElementById('lang-filter');
-    data.language_codes.forEach(l => {
-      const opt = document.createElement('option');
-      opt.value = l; opt.textContent = l.toUpperCase();
-      langSelect.appendChild(opt);
-    });
+    if (data.language_codes.length > 0) {
+      langSelect.innerHTML = '';
+      data.language_codes.forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l; opt.textContent = l.toUpperCase();
+        langSelect.appendChild(opt);
+      });
+    }
   }
 
   function getFilters() {
