@@ -136,7 +136,7 @@
           <th>Word</th>
           <th>Part of Speech</th>
           <th>Language</th>
-          <th>Definition / Etymology</th>
+          <th>Definition</th>
         </tr>
       </thead>
     `;
@@ -144,13 +144,13 @@
 
     data.words.forEach(w => {
       const tr = document.createElement('tr');
+      const defSnippet = esc(w.def_en) ? (w.def_en.length > 50 ? esc(w.def_en).substring(0, 50).split(' ').slice(0, -1).join(' ') + `<span style="color:var(--text-dimmer)"> ...</span>` : esc(w.def_en)) : '';
       tr.innerHTML = `
         <td class="word-cell"><a class="entry-link" href="/word/${w.id}">${esc(w.word)}</a></td>
         <td>${w.pos ? `<span class="pos-badge">${esc(w.pos)}</span> <span class="etymology">${esc(w.class || '')}</span>` : '<span style="color:var(--text-dimmer)">—</span>'}</td>
         <td>${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}</td>
         <td>
-          <div class="definition">${esc(w.def_en || '')}</div>
-          ${w.etymology ? `<div class="etymology">${esc(w.etymology)}</div>` : ''}
+          <div class="definition">${defSnippet}</div>
         </td>
       `;
       tbody.appendChild(tr);
