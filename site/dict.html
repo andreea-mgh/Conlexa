@@ -29,7 +29,7 @@
       </select>
     </div>
 
-    <button class="reset-btn" onclick="resetFilters()">Reset filters</button>
+    <!-- <button class="reset-btn" onclick="resetFilters()">Reset filters</button> -->
 
     <a href="/add" class="reset-btn" style="display:block;text-align:center;text-decoration:none;color:var(--accent);border-color:var(--accent-dim)">+ Add word</a>
 
@@ -40,6 +40,11 @@
   </aside>
 
   <main>
+    <div class="search">
+      <input type="text" id="search-input" placeholder="Search..." disabled />
+      <button id="search-toggle" onclick="toggleSearchField()" disabled>in: words</button>
+      <button id="search-btn" onclick="searchWords()" disabled><svg class="icon" viewBox="0 0 8.4666666 8.4666666"><use href="/res/icons.svg#search"/></svg></button>
+    </div>
     <div class="results-meta" id="results-meta">Loading…</div>
     <div id="table-container"><div class="loading">Loading</div></div>
     <div class="pagination" id="pagination" style="display:none"></div>
@@ -159,6 +164,12 @@
     table.appendChild(tbody);
     container.innerHTML = '';
     container.appendChild(table);
+
+    // enable search input
+    document.getElementById('search-input').disabled = false;
+    document.getElementById('search-btn').disabled = false;
+    document.getElementById('search-toggle').disabled = false;
+
     renderPagination();
   }
 
@@ -200,13 +211,13 @@
     pag.appendChild(info);
   }
 
-  async function resetFilters() {
-    document.getElementById('pos-filter').value = '';
-    document.getElementById('lang-filter').value = '';
-    await loadPartsOfSpeech('');
-    currentPage = 0;
-    loadWords();
-  }
+  // async function resetFilters() {
+  //   document.getElementById('pos-filter').value = '';
+  //   document.getElementById('lang-filter').value = '';
+  //   await loadPartsOfSpeech('');
+  //   currentPage = 0;
+  //   loadWords();
+  // }
 
   function esc(str) {
     if (!str) return '';
@@ -242,6 +253,22 @@
     
     // Load words with current filters (which may include the default language)
     loadWords();
+  }
+
+  function toggleSearchField() {
+    const btn = document.getElementById('search-toggle');
+    if (btn.textContent === 'in: words') {
+      btn.textContent = 'in: definitions';
+      searchWords(); // re-run search to update results based on new search field
+      // document.getElementById('search-input').placeholder = 'Search in definitions...';
+    } else if (btn.textContent === 'in: definitions') {
+      btn.textContent = 'in: tags';
+      // document.getElementById('search-input').placeholder = 'Search in tags...';
+    }
+    else {
+      btn.textContent = 'in: words';
+      // document.getElementById('search-input').placeholder = 'Search...';
+    }
   }
 
   initializePage();

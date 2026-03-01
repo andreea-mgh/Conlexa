@@ -19,6 +19,7 @@
     - [ ] Description
     - [x] Parts of speech
 - [x] IPA auto-guesser
+  - [ ] multiple rulesets for multiple dialects
   - [ ] Add wordshift playground for testing
 - [ ] Conjugator
 

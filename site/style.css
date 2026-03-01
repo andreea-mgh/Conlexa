@@ -563,3 +563,50 @@ ul.list-block li .pos-name {
   border-color: var(--accent-dim);
   color: var(--accent);
 }
+
+.search {
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--surface);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.search input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 1rem;
+  outline: none;
+  flex-grow: 1;
+}
+
+.search button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.search #search-btn {
+  background: var(--bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  padding: 0.5rem;
+}
+
+.icon {
+  width: 1.5em;
+  height: 1.5em;
+  color: var(--accent);
+  display: inline-block;
+  vertical-align: middle;
+}
