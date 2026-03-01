@@ -30,7 +30,7 @@
   - [ ] multiple rulesets for multiple dialects
   - [ ] Add wordshift playground for testing
 - [ ] Conjugator
-
+- [ ] Theming straight from the interface
 
 
 
