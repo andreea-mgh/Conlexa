@@ -1,5 +1,13 @@
 # Conlexa - Self-hosted conlanging tool
 
+## Screenshots
+
+![dictionary](screenshots/screen1.png)
+![word page](screenshots/screen3.png)
+![language settings](screenshots/screen2.png)
+
+
+
 ## Todo
 
 - [ ] Dictionary
