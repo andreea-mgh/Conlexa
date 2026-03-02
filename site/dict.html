@@ -42,6 +42,7 @@
   <main>
     <div class="search">
       <input type="text" id="search-input" placeholder="Search..." disabled />
+      <button id="search-clear" onclick="document.getElementById('search-input').value=''; loadWords();" disabled>×</button>
       <button id="search-toggle" onclick="toggleSearchField()" disabled>in: words</button>
       <button id="search-btn" onclick="searchWords()" disabled><svg class="icon" viewBox="0 0 8.4666666 8.4666666"><use href="/res/icons.svg#search"/></svg></button>
     </div>
@@ -223,12 +224,23 @@
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  document.getElementById('pos-filter').addEventListener('change', () => { currentPage = 0; loadWords(); });
+  document.getElementById('pos-filter').addEventListener('change', () => { 
+    currentPage = 0;
+    if (document.getElementById('search-input').value.trim()) {
+      searchWords();
+    } else {
+      loadWords();
+    }
+  });
   document.getElementById('lang-filter').addEventListener('change', async () => { 
     const langCode = document.getElementById('lang-filter').value;
     await loadPartsOfSpeech(langCode);
-    currentPage = 0; 
-    loadWords(); 
+    currentPage = 0;
+    if (document.getElementById('search-input').value.trim()) {
+      searchWords();
+    } else {
+      loadWords();
+    } 
   });
 
   async function initializePage() {
@@ -270,8 +282,8 @@
     const query = document.getElementById('search-input').value.trim();
 
     if (!query) {
-      // currentPage = 0;
-      // loadWords();
+      currentPage = 0;
+      loadWords();
       return;
     }
 
