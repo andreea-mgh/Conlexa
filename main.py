@@ -260,6 +260,38 @@ def apply_phonology(
         print(f"Error applying IPA rules for language {lang_code} on word '{word}': {str(e)}")  # Debug log
         raise HTTPException(status_code=500, detail=f"Error applying IPA rules: {str(e)}")
 
+@app.get("/api/search")
+def search_words(
+    query: str = Query(..., min_length=1),
+    target: str = Query("all", regex="^(words|definitions|tags|all)$"),
+    limit: int = Query(20, le=100),
+    pos: str = Query(None),
+    language_code: str = Query(None)
+):
+    print(f"Search query: '{query}', target: '{target}', limit: {limit}")  # Debug log
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            filter = ''
+            if pos:
+                filter += f" AND pos = '{pos}'"
+            if language_code:
+                filter += f" AND language_code = '{language_code}'"
+            if target == "words":
+                cur.execute("SELECT id, word, def_en, pos, class, language_code FROM words WHERE word ILIKE %s" + filter + " ORDER BY word LIMIT %s", (f"%{query}%", limit))
+            elif target == "definitions":
+                cur.execute("SELECT id, word, def_en, pos, class, language_code FROM words WHERE def_en ILIKE %s" + filter + " ORDER BY word LIMIT %s", (f"%{query}%",  limit))
+            elif target == "tags":
+                cur.execute("SELECT id, word, def_en, pos, class, language_code FROM words WHERE tags ILIKE %s ORDER BY word LIMIT %s", (f"%{query}%", limit))
+            else:  # all
+                cur.execute("""
+                    SELECT id, word, def_en, pos, class, language_code 
+                    FROM words 
+                    WHERE word ILIKE %s OR def_en ILIKE %s OR tags ILIKE %s 
+                    ORDER BY word 
+                    LIMIT %s
+                """, (f"%{query}%", f"%{query}%", f"%{query}%", limit))
+            rows = cur.fetchall()
+    return {"results": [dict(r) for r in rows]}
 
 @app.get("/add")
 def add_page():

@@ -111,6 +111,34 @@
     };
   }
 
+  function renderWordTable(words) {
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Word</th>
+          <th>Part of Speech</th>
+          <th>Language</th>
+          <th>Definition</th>
+        </tr>
+      </thead>
+    `;
+    const tbody = document.createElement('tbody');
+    words.forEach(w => {
+      const tr = document.createElement('tr');
+      const defSnippet = esc(w.def_en) ? (w.def_en.length > 50 ? esc(w.def_en).substring(0, 50).split(' ').slice(0, -1).join(' ') + `<span style="color:var(--text-dimmer)"> ...</span>` : esc(w.def_en)) : '';
+      tr.innerHTML = `
+        <td class="word-cell"><a class="entry-link" href="/word/${w.id}">${esc(w.word)}</a></td>
+        <td>${w.pos ? `<span class="pos-badge">${esc(w.pos)}</span> <span class="etymology">${esc(w.class || '')}</span>` : '<span style="color:var(--text-dimmer)">—</span>'}</td>
+        <td>${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}</td>
+        <td><div class="definition">${defSnippet}</div></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    return table;
+  }
+
   async function loadWords() {
     const container = document.getElementById('table-container');
     container.innerHTML = '<div class="loading">Loading</div>';
@@ -134,38 +162,9 @@
       return;
     }
 
-    const table = document.createElement('table');
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th>Word</th>
-          <th>Part of Speech</th>
-          <th>Language</th>
-          <th>Definition</th>
-        </tr>
-      </thead>
-    `;
-    const tbody = document.createElement('tbody');
-
-    data.words.forEach(w => {
-      const tr = document.createElement('tr');
-      const defSnippet = esc(w.def_en) ? (w.def_en.length > 50 ? esc(w.def_en).substring(0, 50).split(' ').slice(0, -1).join(' ') + `<span style="color:var(--text-dimmer)"> ...</span>` : esc(w.def_en)) : '';
-      tr.innerHTML = `
-        <td class="word-cell"><a class="entry-link" href="/word/${w.id}">${esc(w.word)}</a></td>
-        <td>${w.pos ? `<span class="pos-badge">${esc(w.pos)}</span> <span class="etymology">${esc(w.class || '')}</span>` : '<span style="color:var(--text-dimmer)">—</span>'}</td>
-        <td>${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}</td>
-        <td>
-          <div class="definition">${defSnippet}</div>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    table.appendChild(tbody);
     container.innerHTML = '';
-    container.appendChild(table);
+    container.appendChild(renderWordTable(data.words));
 
-    // enable search input
     document.getElementById('search-input').disabled = false;
     document.getElementById('search-btn').disabled = false;
     document.getElementById('search-toggle').disabled = false;
@@ -259,17 +258,55 @@
     const btn = document.getElementById('search-toggle');
     if (btn.textContent === 'in: words') {
       btn.textContent = 'in: definitions';
-      searchWords(); // re-run search to update results based on new search field
-      // document.getElementById('search-input').placeholder = 'Search in definitions...';
     } else if (btn.textContent === 'in: definitions') {
       btn.textContent = 'in: tags';
-      // document.getElementById('search-input').placeholder = 'Search in tags...';
-    }
-    else {
+    } else {
       btn.textContent = 'in: words';
-      // document.getElementById('search-input').placeholder = 'Search...';
     }
+    searchWords();
   }
+
+  async function searchWords() {
+    const query = document.getElementById('search-input').value.trim();
+
+    if (!query) {
+      // currentPage = 0;
+      // loadWords();
+      return;
+    }
+
+    const toggleBtn = document.getElementById('search-toggle');
+    const targetMap = { 'in: words': 'words', 'in: definitions': 'definitions', 'in: tags': 'tags' };
+    const target = targetMap[toggleBtn.textContent] || 'words';
+
+    const container = document.getElementById('table-container');
+    container.innerHTML = '<div class="loading">Searching…</div>';
+    document.getElementById('pagination').style.display = 'none';
+
+    const { part_of_speech, language_code } = getFilters(); 
+    const params = new URLSearchParams({ query, target, limit: 100 });
+    if (part_of_speech) params.append('pos', part_of_speech);
+    if (language_code) params.append('language_code', language_code);
+    const res = await fetch('/api/search?' + params);
+    const data = await res.json();
+    const results = data.results;
+
+    document.getElementById('total-count').textContent = results.length.toLocaleString();
+    document.getElementById('results-meta').textContent =
+      `${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`;
+
+    if (!results.length) {
+      container.innerHTML = '<div class="empty">No results found.</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    container.appendChild(renderWordTable(results));
+  }
+
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchWords();
+  });
 
   initializePage();
 </script>
