@@ -19,7 +19,7 @@
   </aside>
 
   <main>
-    <form id="add-form">
+    <form id="edit-form">
       <div class="filter-group">
         <label>Word</label>
         <input name="word" class="edit-field" type="text" required autofocus>
@@ -68,17 +68,24 @@
   </main>
 </div>
 
+<script src="/common.js"></script>
+
 <script>
+  const langSelect = document.querySelector('select[name="language_code"]');
+    langSelect.addEventListener('change', async () => {
+      await updatePartsOfSpeechSelect(langSelect.value);
+  });
+
   async function loadFilters() {
     const res = await fetch('/api/filters');
     if (!res.ok) return;
     const data = await res.json();
-    const posSelect = document.getElementById('pos-select');
-    data.parts_of_speech.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p; opt.textContent = p;
-      posSelect.appendChild(opt);
-    });
+    // const posSelect = document.getElementById('pos-select');
+    // data.parts_of_speech.forEach(p => {
+    //   const opt = document.createElement('option');
+    //   opt.value = p; opt.textContent = p;
+    //   posSelect.appendChild(opt);
+    // });
     const langSelect = document.getElementById('lang-select');
     data.language_codes.forEach(l => {
       const opt = document.createElement('option');
@@ -87,7 +94,7 @@
     });
   }
 
-  document.getElementById('add-form').addEventListener('submit', async (e) => {
+  document.getElementById('edit-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
     const tagsRaw = form.tags.value.trim();
