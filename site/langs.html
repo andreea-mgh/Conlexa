@@ -1,155 +1,224 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" x-data="languages">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Languages ⋄ Conlexa</title>
 <link rel="stylesheet" href="/style.css"/>
+<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
 </head>
 <body>
 
 <header>
   <h1><a href="/" class="entry-link">Conlexa</a></h1>
-  <span class="subtitle" id="lang-label">Languages</span>
+  <span class="subtitle" x-text="pageTitle">Languages</span>
 </header>
 
 <div class="layout">
   <aside>
-    <button class="reset-btn" id="back-btn" onclick="window.location.href='/'">← Back</button>
+    <button class="reset-btn" @click="goBack">← Back</button>
   </aside>
 
   <main id="main" class="main-flex">
-    <div class="loading">Loading</div>
+    <!-- Loading state -->
+    <div class="loading" x-show="isLoading">Loading</div>
+    
+    <!-- Error state -->
+    <div class="empty" x-show="!isLoading && error" x-text="error"></div>
+    
+    <!-- List view -->
+    <template x-if="!isLoading && !error && !selectedLanguage">
+      <div>
+        <template x-for="lang in languages" :key="lang.code">
+          <h3 class="page-link" @click="selectLanguage(lang.code)" style="cursor: pointer;">
+            <span class="lang-badge" x-text="lang.code"></span>
+            <span x-text="lang.name_en"></span>
+          </h3>
+        </template>
+        <div class="empty" x-show="languages.length === 0">No languages found.</div>
+      </div>
+    </template>
+    
+    <!-- Detail view -->
+    <template x-if="!isLoading && !error && selectedLanguage">
+      <div>
+        <div class="word-header">
+          <div class="word-heading-row">
+            <h2 class="word-heading" x-text="selectedLanguage.name_en"></h2>
+            <span class="lang-badge" x-text="selectedLanguage.code"></span>
+          </div>
+        </div>
+        <div class="word-detail">
+          <h2>Grammar</h2>
+          <div class="section-block">
+            <div class="section-label">Parts of Speech</div>
+            <ul class="list-block">
+              <template x-for="pos in selectedLanguage.parts_of_speech" :key="pos.code">
+                <li>
+                  <span class="pos-badge" x-text="pos.code"></span>
+                  <span class="pos-name" x-text="pos.name_en"></span>
+                  <button class="delete-button" @click="deletePartOfSpeech(pos.code)">delete</button>
+                </li>
+              </template>
+            </ul>
+            <div class="inline-inputs" x-show="showAddPosForm" style="margin-top: 1rem;">
+              <input type="text" x-model="newPosCode" placeholder="CODE" class="edit-field" style="width:10em;flex-grow:unset" maxlength="10"/>
+              <input type="text" x-model="newPosName" placeholder="NAME" class="edit-field"/>
+              <button class="inline-submit-btn" @click="addPartOfSpeech">Add</button>
+            </div>
+            <div style="color:var(--text-dim); font-size: 0.9em; margin-top: 0.5rem;">
+              <button class="info-button" @click="showAddPosForm = true">+</button> Add part of speech
+            </div>
+          </div>
+          <h2>Phonology</h2>
+          <div class="section-block">
+            <div class="section-label">IPA Ruleset <a :href="'/phono/ipa/' + selectedLanguage.code" target="_blank">(Edit)</a></div>
+            <template x-if="selectedLanguage.ipa_ruleset">
+              <pre class="edit-field" x-text="selectedLanguage.ipa_ruleset"></pre>
+            </template>
+            <template x-if="!selectedLanguage.ipa_ruleset">
+              <p class="empty" style="text-align:left;padding:0;">No IPA ruleset defined.</p>
+            </template>
+          </div>
+        </div>
+      </div>
+    </template>
   </main>
 </div>
 
+<script src="/js/utils.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/store.js"></script>
+
 <script>
-  function esc(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  function getQueryParam(name) {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(name);
-  }
-
-  async function loadLangDetail(code) {
-    const main = document.getElementById('main');
-    // subtitle
-    const label = document.getElementById('lang-label');
-    if (label) label.textContent = 'Language Details';
+document.addEventListener('alpine:init', () => {
+  Alpine.data('languages', () => ({
+    // State
+    isLoading: true,
+    error: '',
+    languages: [],
+    selectedLanguage: null,
+    showAddPosForm: false,
+    newPosCode: '',
+    newPosName: '',
     
-    const res = await fetch(`/api/langs/${encodeURIComponent(code)}`);
-    if (!res.ok) {
-      main.innerHTML = `<div class="empty">Language "${esc(code)}" not found.</div>`;
-      return;
-    }
-    const lang = await res.json();
-    renderLangDetail(lang);
-  }
-
-  function renderLangDetail(lang) {
-    // console.log('Loaded lang:', lang);
-    // set window title
-    document.title = `${lang.name_en} (${lang.code}) ⋄ Conlexa`;
-    const main = document.getElementById('main');
-    main.innerHTML = `
-      <div class="word-header">
-        <div class="word-heading-row">
-          <h2 class="word-heading">${esc(lang.name_en)}</h2>
-          <span class="lang-badge">${esc(lang.code)}</span>
-        </div>
-      </div>
-      <div class="word-detail">
-        <h2>Grammar</h2>
-        <div class="section-block">
-          <div class="section-label">Parts of Speech</div>
-          <ul class="list-block">
-          ${lang.parts_of_speech.map(pos => `<li><span class="pos-badge">${esc(pos.code)}</span> <span class="pos-name">${esc(pos.name_en)}</span> <button class="delete-button" onclick="deletePartOfSpeech('${lang.code}', '${pos.code}')">delete</button></li>`).join('')}
-          </ul>
-          <div id="add-pos-section" class="inline-inputs" style="display:none; margin-top: 1rem;">
-          <input type="text" id="new-pos-code" placeholder="CODE" class="edit-field" style="width:10em;flex-grow:unset" maxlength="10"/>
-          <input type="text" id="new-pos-name" placeholder="NAME" class="edit-field"/>
-          <button class="inline-submit-btn" onclick="addPartOfSpeech('${lang.code}')">Add</button>
-          </div>
-          <div style="color:var(--text-dim); font-size: 0.9em; margin-top: 0.5rem;"> <button class="info-button" onclick="showAddPartOfSpeech('${lang.code}')">+</button> Add part of speech</div>
-        </div>
-        <h2>Phonology</h2>
-        <div class="section-block">
-          <div class="section-label">IPA Ruleset <a href="/phono/ipa/${lang.code}" target="_blank">(Edit)</a></div>
-          ${lang.ipa_ruleset ? `<pre class="edit-field">${esc(lang.ipa_ruleset)}</pre>` : '<p class="empty" style="text-align:left;padding:0;">No IPA ruleset defined.</p>'}
-        </div> 
-      </div>
-    `;
-  }
-
-  function showAddPartOfSpeech(langCode) {
-    document.getElementById('add-pos-section').style.display = 'flex';
-  }
-
-  async function addPartOfSpeech(langCode) {
-    const codeInput = document.getElementById('new-pos-code');
-    const nameInput = document.getElementById('new-pos-name');
-    const code = codeInput.value.trim().toUpperCase();
-    const name_en = nameInput.value.trim();
-    if (!code || !name_en) {
-      alert('Please fill in both code and name.');
-      return;
-    }
-    const res = await fetch(`/api/langs/${encodeURIComponent(langCode)}/parts_of_speech`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, name_en }),
-    });
-    if (!res.ok) {
-      alert('Failed to add part of speech.');
-      return;
-    }
-    // reload language details
-    loadLangDetail(langCode);
-  }
-
-  async function deletePartOfSpeech(langCode, posCode) {
-    if (!confirm(`Are you sure you want to delete part of speech "${posCode}"?`)) return;
-    const res = await fetch(`/api/langs/${encodeURIComponent(langCode)}/parts_of_speech/${encodeURIComponent(posCode)}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) {
-      const detail = (await res.json()).detail || `Status code: ${res.status}`;
-      alert(`Failed to delete part of speech. ${detail}`);
-      return;
-    }
-    // reload language details
-    loadLangDetail(langCode);
-  }
-
-  async function loadLangs() {
-    const main = document.getElementById('main');
-    const label = document.getElementById('lang-label');
-    if (label) label.textContent = 'Languages';
+    // Computed
+    get pageTitle() {
+      if (this.isLoading) return 'Languages';
+      return this.selectedLanguage ? 'Language Details' : 'Languages';
+    },
     
-    const res = await fetch('/api/langs');
-    if (!res.ok) { main.innerHTML = '<div class="empty">Failed to load languages.</div>'; return; }
-    const data = await res.json();
-
-    if (!data.langs || data.langs.length === 0) {
-      main.innerHTML = '<div class="empty">No languages found.</div>';
-      return;
+    // Lifecycle
+    async init() {
+      // Check URL for code parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      if (code) {
+        await this.loadLanguageDetail(code);
+      } else {
+        await this.loadLanguages();
+      }
+    },
+    
+    // Methods
+    async loadLanguages() {
+      this.isLoading = true;
+      this.error = '';
+      try {
+        this.languages = await fetchLanguages();
+      } catch (error) {
+        console.error('Failed to load languages:', error);
+        this.error = 'Failed to load languages.';
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    async loadLanguageDetail(code) {
+      this.isLoading = true;
+      this.error = '';
+      try {
+        const lang = await fetchLanguage(code);
+        this.selectedLanguage = lang;
+        document.title = `${lang.name_en} (${lang.code}) ⋄ Conlexa`;
+      } catch (error) {
+        console.error('Failed to load language:', error);
+        this.error = `Language "${esc(code)}" not found.`;
+        this.selectedLanguage = null;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    selectLanguage(code) {
+      // Update URL without reloading page
+      const url = new URL(window.location);
+      url.searchParams.set('code', code);
+      window.history.pushState({}, '', url);
+      this.loadLanguageDetail(code);
+    },
+    
+    goBack() {
+      if (this.selectedLanguage) {
+        // Clear selected language and show list
+        this.selectedLanguage = null;
+        this.showAddPosForm = false;
+        this.newPosCode = '';
+        this.newPosName = '';
+        
+        // Update URL
+        const url = new URL(window.location);
+        url.searchParams.delete('code');
+        window.history.pushState({}, '', url);
+        document.title = 'Languages ⋄ Conlexa';
+      } else {
+        window.location.href = '/';
+      }
+    },
+    
+    async addPartOfSpeech() {
+      if (!this.selectedLanguage) return;
+      
+      const code = this.newPosCode.trim().toUpperCase();
+      const name_en = this.newPosName.trim();
+      
+      if (!code || !name_en) {
+        alert('Please fill in both code and name.');
+        return;
+      }
+      
+      try {
+        await createPartOfSpeech(this.selectedLanguage.code, code, name_en);
+        // Reload language details
+        await this.loadLanguageDetail(this.selectedLanguage.code);
+        // Reset form
+        this.showAddPosForm = false;
+        this.newPosCode = '';
+        this.newPosName = '';
+      } catch (error) {
+        console.error('Failed to add part of speech:', error);
+        alert('Failed to add part of speech.');
+      }
+    },
+    
+    async deletePartOfSpeech(posCode) {
+      if (!this.selectedLanguage) return;
+      
+      if (!confirm(`Are you sure you want to delete part of speech "${posCode}"?`)) return;
+      
+      try {
+        await deletePartOfSpeech(this.selectedLanguage.code, posCode);
+        // Reload language details
+        await this.loadLanguageDetail(this.selectedLanguage.code);
+      } catch (error) {
+        console.error('Failed to delete part of speech:', error);
+        alert(`Failed to delete part of speech. ${error.message}`);
+      }
     }
-
-    main.innerHTML = data.langs.map(l =>
-      `<h3 class="page-link" onclick="window.location.href='?code=${encodeURIComponent(l.code)}'" style="cursor: pointer;">
-        <span class="lang-badge">${esc(l.code)}</span> ${esc(l.name_en)}
-      </h3>`
-    ).join('');
-  }
-
-  const code = getQueryParam('code');
-  if (code) {
-    loadLangDetail(code);
-  } else {
-    loadLangs();
-  }
+  }));
+});
 </script>
+
 </body>
 </html>

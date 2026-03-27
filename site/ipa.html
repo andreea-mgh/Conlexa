@@ -1,95 +1,167 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" x-data="ipaRuleset">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>IPA Ruleset ⋄ Conlexa</title>
 <link rel="stylesheet" href="/style.css"/>
+<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
 </head>
 <body>
 
 <header>
   <h1><a href="/" class="entry-link">Conlexa</a></h1>
-  <span class="subtitle" id="lang-label">IPA Ruleset</span>
+  <span class="subtitle" x-text="pageTitle">IPA Ruleset</span>
 </header>
 
 <div class="layout">
   <aside>
-    <button class="reset-btn" id="back-btn" onclick="window.location.href='/phono/ipa'">← Back</button>
+    <button class="reset-btn" @click="goBack">← Back</button>
   </aside>
 
   <main id="main" class="main-flex">
-    <div class="loading">Loading</div>
+    <!-- Loading state -->
+    <div class="loading" x-show="isLoading">Loading</div>
+    
+    <!-- Index view: list of languages -->
+    <template x-if="!isLoading && isIndex">
+      <div>
+        <h2>IPA Rulesets<button class="info-button" @click="openDocs">?</button></h2>
+        <template x-for="lang in languages" :key="lang.code">
+          <h3 class="page-link">
+            <a :href="'/phono/ipa/' + lang.code" x-text="lang.name_en + ' (' + lang.code + ')'"></a>
+          </h3>
+        </template>
+        <div class="empty" x-show="languages.length === 0">No languages found.</div>
+      </div>
+    </template>
+    
+    <!-- Edit view: ruleset textarea -->
+    <template x-if="!isLoading && !isIndex && language">
+      <div style="display: flex; flex-direction: column; height: 100%;">
+        <textarea 
+          x-model="rulesetText" 
+          class="edit-field" 
+          spellcheck="false" 
+          style="flex:1;min-height:400px"
+          placeholder="Enter IPA ruleset..."></textarea>
+        <div class="form-actions">
+          <button class="reset-btn reset-btn-accent" @click="save" :disabled="isSaving" x-text="saveButtonText"></button>
+        </div>
+      </div>
+    </template>
+    
+    <!-- Error state -->
+    <div class="empty" x-show="!isLoading && error" x-text="error"></div>
   </main>
 </div>
 
+<script src="/js/utils.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/store.js"></script>
+
 <script>
-  const pathEnd = window.location.pathname.split('/').filter(Boolean).pop();
-  const isIndex = pathEnd === 'ipa';
-  const lang = isIndex ? null : pathEnd.toUpperCase();
-
-  function esc(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  async function loadIndex() {
-    document.title = 'IPA Rulesets ⋄ Conlexa';
-    document.getElementById('lang-label').textContent = 'IPA Rulesets';
-    const main = document.getElementById('main');
-    const res = await fetch('/api/langs');
-    if (!res.ok) { main.innerHTML = '<div class="empty">Failed to load languages.</div>'; return; }
-    const data = await res.json();
-    if (data.langs.length === 0) {
-      main.innerHTML = '<div class="empty">No languages found.</div>';
-      return;
+document.addEventListener('alpine:init', () => {
+  Alpine.data('ipaRuleset', () => ({
+    // State
+    isLoading: true,
+    isIndex: false,
+    languages: [],
+    language: null,
+    rulesetText: '',
+    isSaving: false,
+    error: '',
+    
+    // Computed
+    get pageTitle() {
+      if (this.isIndex) return 'IPA Rulesets';
+      if (this.language) return `IPA Ruleset — ${this.language.code}`;
+      return 'IPA Ruleset';
+    },
+    
+    get saveButtonText() {
+      if (this.isSaving) return 'Saving…';
+      return 'Save';
+    },
+    
+    // Lifecycle
+    async init() {
+      // Determine if we're on index page or language page
+      const pathEnd = window.location.pathname.split('/').filter(Boolean).pop();
+      this.isIndex = pathEnd === 'ipa';
+      
+      if (this.isIndex) {
+        await this.loadLanguages();
+      } else {
+        const langCode = pathEnd.toUpperCase();
+        await this.loadLanguage(langCode);
+      }
+    },
+    
+    // Methods
+    async loadLanguages() {
+      this.isLoading = true;
+      this.error = '';
+      try {
+        this.languages = await fetchLanguages();
+        document.title = 'IPA Rulesets ⋄ Conlexa';
+      } catch (error) {
+        console.error('Failed to load languages:', error);
+        this.error = 'Failed to load languages.';
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    async loadLanguage(langCode) {
+      this.isLoading = true;
+      this.error = '';
+      try {
+        const langData = await fetchLanguage(langCode);
+        this.language = langData;
+        this.rulesetText = langData.ipa_ruleset || '';
+        document.title = `IPA Ruleset: ${langData.code} ⋄ Conlexa`;
+      } catch (error) {
+        console.error('Failed to load language:', error);
+        this.error = 'Language not found.';
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    async save() {
+      if (!this.language || this.isSaving) return;
+      
+      this.isSaving = true;
+      try {
+        await updateLanguage(this.language.code, { ipa_ruleset: this.rulesetText });
+        // Show success feedback
+        const originalText = this.saveButtonText;
+        // Temporarily show "Saved"
+        setTimeout(() => {
+          this.isSaving = false;
+        }, 1500);
+      } catch (error) {
+        console.error('Save failed:', error);
+        alert('Save failed. Please try again.');
+        this.isSaving = false;
+      }
+    },
+    
+    goBack() {
+      if (this.isIndex) {
+        window.location.href = '/';
+      } else {
+        window.location.href = '/phono/ipa';
+      }
+    },
+    
+    openDocs() {
+      window.open('/ipa_doc.html', '_blank');
     }
-    console.log(data.langs);
-    main.innerHTML = '<h2>IPA Rulesets<button class="info-button" onclick="window.open(\'/ipa_doc.html\', \'_blank\')">?</button></h2>' + data.langs.map(l =>
-      `<h3 class="page-link"><a href="/phono/ipa/${esc(l.code)}">${esc(l.name_en)} (${esc(l.code)})</a></h3>`
-    ).join('');
-    // back button to home page
-    const backBtn = document.getElementById('back-btn');
-    backBtn.onclick = () => { window.location.href = '/'; };
-  }
-
-  async function load() {
-    const res = await fetch(`/api/langs/${lang}`);
-    const main = document.getElementById('main');
-    if (!res.ok) {
-      main.innerHTML = '<div class="empty">Language not found.</div>';
-      return;
-    }
-    const data = await res.json();
-    document.title = `IPA Ruleset: ${data.code} ⋄ Conlexa`;
-    document.getElementById('lang-label').textContent = `IPA Ruleset — ${data.code}`;
-    main.innerHTML = `
-      <textarea id="ruleset" class="edit-field" spellcheck="false" style="flex:1;min-height:400px">${esc(data.ipa_ruleset || '')}</textarea>
-      <div class="form-actions">
-        <button class="reset-btn reset-btn-accent" id="save-btn" onclick="save()">Save</button>
-      </div>
-    `;
-  }
-
-  async function save() {
-    const btn = document.getElementById('save-btn');
-    btn.textContent = 'Saving…';
-    btn.disabled = true;
-    const res = await fetch(`/api/langs/${lang}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ipa_ruleset: document.getElementById('ruleset').value }),
-    });
-    btn.disabled = false;
-    if (res.ok) {
-      btn.textContent = 'Saved';
-      setTimeout(() => { btn.textContent = 'Save'; }, 1500);
-    } else {
-      btn.textContent = 'Save';
-      alert('Save failed. Please try again.');
-    }
-  }
-
-  isIndex ? loadIndex() : load();
+  }));
+});
 </script>
+
 </body>
 </html>

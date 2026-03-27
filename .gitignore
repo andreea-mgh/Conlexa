@@ -1,3 +1,5 @@
 /__pycache__
 /site/themes
 logs.txt
+/site/backup
+notes.md

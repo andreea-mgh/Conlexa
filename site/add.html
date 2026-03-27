@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" x-data="addWord">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Add Word ⋄ Conlexa</title>
 <link rel="stylesheet" href="/style.css"/>
+<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
 </head>
 <body>
 
@@ -19,115 +20,158 @@
   </aside>
 
   <main>
-    <form id="edit-form">
+    <form @submit.prevent="submitForm">
       <div class="filter-group">
         <label>Word</label>
-        <input name="word" class="edit-field" type="text" required autofocus>
+        <input name="word" class="edit-field" type="text" required autofocus x-model="form.word">
       </div>
       <div class="filter-group">
         <label>Native Script</label>
-        <input name="word_scripted" class="edit-field" type="text">
+        <input name="word_scripted" class="edit-field" type="text" x-model="form.word_scripted">
       </div>
       <div class="filter-group">
         <label>Part of Speech</label>
-        <select name="pos" class="edit-field" id="pos-select">
+        <select name="pos" class="edit-field" x-model="form.pos">
           <option value="">—</option>
+          <template x-for="pos in partsOfSpeech" :key="pos.code">
+            <option :value="pos.code" x-text="pos.code"></option>
+          </template>
         </select>
       </div>
       <div class="filter-group">
         <label>Class</label>
-        <input name="class" class="edit-field" type="text">
+        <input name="class" class="edit-field" type="text" x-model="form.class">
       </div>
       <div class="filter-group">
         <label>Language Code</label>
-        <select name="language_code" class="edit-field" id="lang-select">
+        <select name="language_code" class="edit-field" x-model="form.language_code" @change="onLanguageChange">
           <option value="">—</option>
+          <template x-for="lang in languages" :key="lang">
+            <option :value="lang" x-text="lang"></option>
+          </template>
         </select>
       </div>
       <div class="filter-group">
         <label>Definition</label>
-        <textarea name="def_en" class="edit-field" rows="4"></textarea>
+        <textarea name="def_en" class="edit-field" rows="4" x-model="form.def_en"></textarea>
       </div>
       <div class="filter-group">
         <label>Etymology</label>
-        <textarea name="etymology" class="edit-field" rows="3"></textarea>
+        <textarea name="etymology" class="edit-field" rows="3" x-model="form.etymology"></textarea>
       </div>
       <div class="filter-group">
         <label>Example</label>
-        <textarea name="example" class="edit-field" rows="2"></textarea>
+        <textarea name="example" class="edit-field" rows="2" x-model="form.example"></textarea>
       </div>
       <div class="filter-group">
         <label>Tags (comma-separated)</label>
-        <input name="tags" class="edit-field" type="text">
+        <input name="tags" class="edit-field" type="text" x-model="form.tagsRaw">
       </div>
       <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
-        <button type="submit" class="reset-btn" id="submit-btn" style="color:var(--accent);border-color:var(--accent-dim)">Add word</button>
+        <button type="submit" class="reset-btn" :disabled="isSubmitting" style="color:var(--accent);border-color:var(--accent-dim)" x-text="submitButtonText"></button>
         <a href="/dictionary" class="reset-btn" style="text-decoration:none;text-align:center">Cancel</a>
       </div>
     </form>
   </main>
 </div>
 
-<script src="/common.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/store.js"></script>
 
 <script>
-  const langSelect = document.querySelector('select[name="language_code"]');
-    langSelect.addEventListener('change', async () => {
-      await updatePartsOfSpeechSelect(langSelect.value);
-  });
-
-  async function loadFilters() {
-    const res = await fetch('/api/filters');
-    if (!res.ok) return;
-    const data = await res.json();
-    // const posSelect = document.getElementById('pos-select');
-    // data.parts_of_speech.forEach(p => {
-    //   const opt = document.createElement('option');
-    //   opt.value = p; opt.textContent = p;
-    //   posSelect.appendChild(opt);
-    // });
-    const langSelect = document.getElementById('lang-select');
-    data.language_codes.forEach(l => {
-      const opt = document.createElement('option');
-      opt.value = l; opt.textContent = l;
-      langSelect.appendChild(opt);
-    });
-  }
-
-  document.getElementById('edit-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const tagsRaw = form.tags.value.trim();
-    const body = {
-      word: form.word.value.trim(),
-      word_scripted: form.word_scripted.value.trim() || null,
-      pos: form.pos.value || null,
-      class: form.class.value.trim() || null,
-      language_code: form.language_code.value || null,
-      def_en: form.def_en.value.trim() || null,
-      etymology: form.etymology.value.trim() || null,
-      example: form.example.value.trim() || null,
-      tags: tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : null,
-    };
-    const btn = document.getElementById('submit-btn');
-    btn.textContent = 'Adding…';
-    btn.disabled = true;
-    const res = await fetch('/api/words', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      const { id } = await res.json();
-      window.location.href = `/word/${id}`;
-    } else {
-      btn.textContent = 'Add word';
-      btn.disabled = false;
-      alert('Failed to add word. Please try again.');
+document.addEventListener('alpine:init', () => {
+  Alpine.data('addWord', () => ({
+    // State
+    languages: [],
+    partsOfSpeech: [],
+    isSubmitting: false,
+    isLoading: true,
+    
+    // Form data
+    form: {
+      word: '',
+      word_scripted: '',
+      pos: '',
+      class: '',
+      language_code: '',
+      def_en: '',
+      etymology: '',
+      example: '',
+      tagsRaw: '',
+    },
+    
+    // Computed
+    get submitButtonText() {
+      return this.isSubmitting ? 'Adding…' : 'Add word';
+    },
+    
+    // Lifecycle
+    async init() {
+      await this.loadFilters();
+    },
+    
+    // Methods
+    async loadFilters() {
+      this.isLoading = true;
+      try {
+        const data = await fetchFilters();
+        this.languages = data.language_codes || [];
+      } catch (error) {
+        console.error('Failed to load filters:', error);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    async onLanguageChange() {
+      if (!this.form.language_code) {
+        this.partsOfSpeech = [];
+        return;
+      }
+      
+      try {
+        const partsOfSpeech = await fetchPartsOfSpeech(this.form.language_code);
+        this.partsOfSpeech = partsOfSpeech;
+      } catch (error) {
+        console.error('Failed to load parts of speech:', error);
+        this.partsOfSpeech = [];
+      }
+    },
+    
+    async submitForm() {
+      if (this.isSubmitting) return;
+      
+      this.isSubmitting = true;
+      
+      try {
+        const tags = this.form.tagsRaw.trim() 
+          ? this.form.tagsRaw.split(',').map(t => t.trim()).filter(Boolean) 
+          : null;
+        
+        const body = {
+          word: this.form.word.trim(),
+          word_scripted: this.form.word_scripted.trim() || null,
+          pos: this.form.pos || null,
+          class: this.form.class.trim() || null,
+          language_code: this.form.language_code || null,
+          def_en: this.form.def_en.trim() || null,
+          etymology: this.form.etymology.trim() || null,
+          example: this.form.example.trim() || null,
+          tags: tags,
+        };
+        
+        const { id } = await createWord(body);
+        window.location.href = `/word/${id}`;
+      } catch (error) {
+        console.error('Failed to add word:', error);
+        alert('Failed to add word. Please try again.');
+        this.isSubmitting = false;
+      }
     }
-  });
-
-  loadFilters();
+  }));
+});
 </script>
+
 </body>
 </html>

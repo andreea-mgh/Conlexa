@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" x-data="word">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Conlexa</title>
 <link rel="stylesheet" href="/style.css"/>
+<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
 </head>
 <body>
 
@@ -15,248 +16,311 @@
 
 <div class="layout">
   <aside>
-    <button class="reset-btn" onclick="window.location.href='/dictionary'">← Back</button>
-    <button class="reset-btn" id="edit-btn" onclick="startEdit()" style="display:none">Edit</button>
-    <button class="reset-btn" id="delete-btn" onclick="deleteWord()" style="display:none">Delete</button>
+    <button class="reset-btn" @click="goBack">← Back</button>
+    <button class="reset-btn" @click="startEdit" x-show="viewMode && !isLoading">Edit</button>
+    <button class="reset-btn" @click="deleteWord" x-show="viewMode && !isLoading">Delete</button>
   </aside>
 
   <main id="content">
-    <div class="loading">Loading</div>
-  </main>
-</div>
-
-<script src="/common.js"></script>
-
-<script>
-  const id = window.location.pathname.split('/').pop();
-  let wordData = null;
-  let filtersData = { parts_of_speech: [], language_codes: [] };
-
-  async function loadFilters() {
-    const res = await fetch('/api/filters');
-    if (res.ok) filtersData = await res.json();
-  }
-
-  // async function getPartsOfSpeechForLanguage(langCode) {
-  //   if (!langCode) return [];
-  //   const res = await fetch(`/api/langs/${encodeURIComponent(langCode)}`);
-  //   if (!res.ok) return [];
-  //   const langData = await res.json();
-  //   return langData.parts_of_speech || [];
-  // }
-
-  // async function updatePartsOfSpeechSelect(langCode) {
-  //   const posSelect = document.querySelector('#edit-form select[name="pos"]');
-  //   if (!posSelect) return;
+    <!-- Loading state -->
+    <div class="loading" x-show="isLoading">Loading</div>
     
-  //   const partsOfSpeech = await getPartsOfSpeechForLanguage(langCode);
-  //   const currentValue = posSelect.value;
+    <!-- Error state -->
+    <div class="empty" x-show="!isLoading && error" x-text="error"></div>
     
-  //   // Clear all existing options
-  //   posSelect.innerHTML = '';
-    
-  //   // Add blank option (since allowBlank is true for pos select)
-  //   const blankOpt = document.createElement('option');
-  //   blankOpt.value = '';
-  //   blankOpt.textContent = '—';
-  //   posSelect.appendChild(blankOpt);
-    
-  //   // Add new options
-  //   partsOfSpeech.forEach(pos => {
-  //     const opt = document.createElement('option');
-  //     opt.value = pos.code;
-  //     opt.textContent = pos.code;
-  //     posSelect.appendChild(opt);
-  //   });
-    
-  //   // Restore previous value if it exists in new options
-  //   if (currentValue && partsOfSpeech.some(pos => pos.code === currentValue)) {
-  //     posSelect.value = currentValue;
-  //   } else {
-  //     posSelect.value = '';
-  //   }
-  // }
-
-  function makeSelect(name, options, current, allowBlank = true) {
-    const opts = options.map(o =>
-      `<option value="${esc(o)}"${o === current ? ' selected' : ''}>${esc(o)}</option>`
-    ).join('');
-    
-    return `<select name="${name}" class="edit-field">${allowBlank ? '<option value="">—</option>' : ''}${opts}</select>`;
-  }
-
-  function esc(str) {
-    if (!str) return '';
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  function renderView(w) {
-    wordData = w;
-    document.getElementById('edit-btn').style.display = '';
-    document.getElementById('delete-btn').style.display = '';
-    document.getElementById('content').innerHTML = `
-      <div class="word-header">
-        <div class="word-heading-row">
-          <h2 class="word-heading">${esc(w.word)}</h2>
-          <span id="ipa-result"></span>
-          ${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}
-          ${w.pos ? `<div><span class="pos-badge">${esc(w.pos)}</span>${w.class ? ` <span class="etymology">${esc(w.class)}</span>` : ''}</div>` : ''}
+    <!-- View mode -->
+    <template x-if="!isLoading && !error && viewMode && wordData">
+      <div>
+        <div class="word-header">
+          <div class="word-heading-row">
+            <h2 class="word-heading" x-text="wordData.word"></h2>
+            <span id="ipa-result" x-text="ipaResult ? '/' + ipaResult + '/' : ''"></span>
+            <template x-if="wordData.language_code">
+              <span class="lang-badge" x-text="wordData.language_code"></span>
+            </template>
+            <template x-if="wordData.pos">
+              <div>
+                <span class="pos-badge" x-text="wordData.pos"></span>
+                <template x-if="wordData.class">
+                  <span class="etymology" x-text="' ' + wordData.class"></span>
+                </template>
+              </div>
+            </template>
+          </div>
         </div>
         
+        <template x-if="wordData.def_en">
+          <div class="section-block">
+            <div class="section-label">Definition</div>
+            <div class="definition" style="font-size:1rem;max-width:none" x-text="wordData.def_en"></div>
+          </div>
+        </template>
+        
+        <template x-if="wordData.etymology">
+          <div class="section-block">
+            <div class="section-label">Etymology</div>
+            <div class="etymology" style="font-size:14px" x-text="wordData.etymology"></div>
+          </div>
+        </template>
+        
+        <template x-if="wordData.tags && wordData.tags.length > 0">
+          <div class="section-block">
+            <div class="section-label">Tags</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <template x-for="tag in wordData.tags" :key="tag">
+                <span class="lang-badge" x-text="tag"></span>
+              </template>
+            </div>
+          </div>
+        </template>
+        
+        <template x-if="wordData.example">
+          <div>
+            <div class="section-label">Example</div>
+            <div style="font-size:14px;font-style:italic;color:var(--text-dim)" x-text="wordData.example"></div>
+          </div>
+        </template>
       </div>
-      ${w.def_en ? `
-      <div class="section-block">
-        <div class="section-label">Definition</div>
-        <div class="definition" style="font-size:1rem;max-width:none">${esc(w.def_en)}</div>
-      </div>` : ''}
-      ${w.etymology ? `
-      <div class="section-block">
-        <div class="section-label">Etymology</div>
-        <div class="etymology" style="font-size:14px">${esc(w.etymology)}</div>
-      </div>` : ''}
-      ${w.tags && w.tags.length > 0 ? `
-      <div class="section-block">
-        <div class="section-label">Tags</div>
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">${w.tags.map(t => `<span class="lang-badge">${esc(t)}</span>`).join('')}</div>
-      </div>` : ''}
-      ${w.example ? `
-      <div>
-        <div class="section-label">Example</div>
-        <div style="font-size:14px;font-style:italic;color:var(--text-dim)">${esc(w.example)}</div>
-      </div>` : ''}
-    `;
-    if (w.language_code) loadIPA(w.word, w.language_code);
-  }
-
-  async function loadIPA(word, lang_code) {
-    const params = new URLSearchParams({ word, lang_code });
-    const res = await fetch(`/api/phonology/apply?${params}`);
-    if (!res.ok) { console.log("Failed to load IPA: ", res); return;}
-    const { result } = await res.json();
-    const el = document.getElementById('ipa-result');
-    if (el) el.textContent = `/${result}/`;
-  }
-
-  async function deleteWord() {
-    if (!confirm(`Delete "${wordData.word}"? This cannot be undone.`)) return;
-    const res = await fetch(`/api/words/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-      window.location.href = '/dictionary';
-    } else {
-      alert('Delete failed. Please try again.');
-    }
-  }
-
-  async function startEdit() {
-    const w = wordData;
-    document.getElementById('edit-btn').style.display = 'none';
-    document.getElementById('delete-btn').style.display = 'none';
+    </template>
     
-    // Get parts of speech for current language
-    const currentPartsOfSpeech = await getPartsOfSpeechForLanguage(w.language_code);
-    const posCodes = currentPartsOfSpeech.map(pos => pos.code);
-    
-    document.getElementById('content').innerHTML = `
-      <form id="edit-form">
+    <!-- Edit mode -->
+    <template x-if="!isLoading && !error && !viewMode">
+      <form @submit.prevent="saveWord">
         <div class="filter-group">
           <label>Word</label>
-          <input name="word" class="edit-field" type="text" value="${esc(w.word)}" required>
+          <input name="word" class="edit-field" type="text" x-model="editForm.word" required>
         </div>
         <div class="filter-group">
           <label>Native Script</label>
-          <input name="word_scripted" class="edit-field" type="text" value="${esc(w.word_scripted || '')}">
+          <input name="word_scripted" class="edit-field" type="text" x-model="editForm.word_scripted">
         </div>
         <div class="filter-group">
           <label>Part of Speech</label>
-          ${makeSelect('pos', posCodes, w.pos || '', true)}
+          <select name="pos" class="edit-field" x-model="editForm.pos">
+            <option value="">—</option>
+            <template x-for="pos in editPartsOfSpeech" :key="pos">
+              <option :value="pos" x-text="pos"></option>
+            </template>
+          </select>
         </div>
         <div class="filter-group">
           <label>Class</label>
-          <input name="class" class="edit-field" type="text" value="${esc(w.class || '')}">
+          <input name="class" class="edit-field" type="text" x-model="editForm.class">
         </div>
         <div class="filter-group">
           <label>Language Code</label>
-          ${makeSelect('language_code', filtersData.language_codes, w.language_code || '', false)}
+          <select name="language_code" class="edit-field" x-model="editForm.language_code" @change="onEditLanguageChange">
+            <option value="">—</option>
+            <template x-for="lang in languageCodes" :key="lang">
+              <option :value="lang" x-text="lang"></option>
+            </template>
+          </select>
         </div>
         <div class="filter-group">
           <label>Definition</label>
-          <textarea name="def_en" class="edit-field" rows="4">${esc(w.def_en || '')}</textarea>
+          <textarea name="def_en" class="edit-field" rows="4" x-model="editForm.def_en"></textarea>
         </div>
         <div class="filter-group">
           <label>Etymology</label>
-          <textarea name="etymology" class="edit-field" rows="3">${esc(w.etymology || '')}</textarea>
+          <textarea name="etymology" class="edit-field" rows="3" x-model="editForm.etymology"></textarea>
         </div>
         <div class="filter-group">
           <label>Example</label>
-          <textarea name="example" class="edit-field" rows="2">${esc(w.example || '')}</textarea>
+          <textarea name="example" class="edit-field" rows="2" x-model="editForm.example"></textarea>
         </div>
         <div class="filter-group">
           <label>Tags (comma-separated)</label>
-          <input name="tags" class="edit-field" type="text" value="${esc((w.tags || []).join(', '))}">
+          <input name="tags" class="edit-field" type="text" x-model="editForm.tagsRaw">
         </div>
         <div class="form-actions">
-          <button type="submit" class="reset-btn reset-btn-accent">Save</button>
-          <button type="button" class="reset-btn" onclick="renderView(wordData)">Cancel</button>
+          <button type="submit" class="reset-btn reset-btn-accent" :disabled="isSaving" x-text="isSaving ? 'Saving…' : 'Save'"></button>
+          <button type="button" class="reset-btn" @click="cancelEdit">Cancel</button>
         </div>
       </form>
-    `;
+    </template>
+  </main>
+</div>
+
+<script src="/js/utils.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/store.js"></script>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.data('word', () => ({
+    // State
+    isLoading: true,
+    error: '',
+    wordData: null,
+    viewMode: true,
+    ipaResult: '',
     
-    const form = document.getElementById('edit-form');
-    form.addEventListener('submit', saveWord);
+    // Edit mode state
+    languageCodes: [],
+    editPartsOfSpeech: [],
+    isSaving: false,
     
-    // Add change listener to language select to update parts of speech
-    const langSelect = form.querySelector('select[name="language_code"]');
-    langSelect.addEventListener('change', async () => {
-      await updatePartsOfSpeechSelect(langSelect.value);
-    });
-  }
-
-  async function saveWord(e) {
-    e.preventDefault();
-    const form = e.target;
-    const tagsRaw = form.tags.value.trim();
-    const body = {
-      word: form.word.value.trim(),
-      word_scripted: form.word_scripted.value.trim() || null,
-      def_en: form.def_en.value.trim() || null,
-      pos: form.pos.value.trim() || null,
-      class: form.class.value.trim() || null,
-      language_code: form.language_code.value.trim() || null,
-      etymology: form.etymology.value.trim() || null,
-      example: form.example.value.trim() || null,
-      tags: tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : null,
-    };
-    const btn = form.querySelector('[type=submit]');
-    btn.textContent = 'Saving…';
-    btn.disabled = true;
-    const res = await fetch(`/api/words/${id}`, {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      loadWord();
-    } else {
-      btn.textContent = 'Save';
-      btn.disabled = false;
-      alert('Save failed. Please try again.');
+    // Edit form data
+    editForm: {
+      word: '',
+      word_scripted: '',
+      pos: '',
+      class: '',
+      language_code: '',
+      def_en: '',
+      etymology: '',
+      example: '',
+      tagsRaw: '',
+    },
+    
+    // Lifecycle
+    async init() {
+      const id = window.location.pathname.split('/').pop();
+      this.id = id;
+      await this.loadFilters();
+      await this.loadWord();
+    },
+    
+    // Methods
+    async loadFilters() {
+      try {
+        const data = await fetchFilters();
+        this.languageCodes = data.language_codes || [];
+      } catch (error) {
+        console.error('Failed to load filters:', error);
+      }
+    },
+    
+    async loadWord() {
+      this.isLoading = true;
+      this.error = '';
+      try {
+        const w = await fetchWord(this.id);
+        this.wordData = w;
+        document.title = `Word: ${w.word} ⋄ Conlexa`;
+        
+        // Load IPA if language code exists
+        if (w.language_code) {
+          await this.loadIPA(w.word, w.language_code);
+        }
+      } catch (error) {
+        console.error('Failed to load word:', error);
+        this.error = 'Word not found.';
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    async loadIPA(word, lang_code) {
+      try {
+        const result = await applyPhonology(word, lang_code);
+        this.ipaResult = result;
+      } catch (error) {
+        console.log("Failed to load IPA: ", error);
+      }
+    },
+    
+    async deleteWord() {
+      if (!this.wordData) return;
+      
+      if (!confirm(`Delete "${this.wordData.word}"? This cannot be undone.`)) return;
+      
+      try {
+        await deleteWord(this.id);
+        window.location.href = '/dictionary';
+      } catch (error) {
+        alert('Delete failed. Please try again.');
+      }
+    },
+    
+    async startEdit() {
+      if (!this.wordData) return;
+      
+      // Populate edit form with current data
+      this.editForm = {
+        word: this.wordData.word || '',
+        word_scripted: this.wordData.word_scripted || '',
+        pos: this.wordData.pos || '',
+        class: this.wordData.class || '',
+        language_code: this.wordData.language_code || '',
+        def_en: this.wordData.def_en || '',
+        etymology: this.wordData.etymology || '',
+        example: this.wordData.example || '',
+        tagsRaw: (this.wordData.tags || []).join(', '),
+      };
+      
+      // Load parts of speech for current language
+      if (this.wordData.language_code) {
+        await this.loadPartsOfSpeech(this.wordData.language_code);
+      }
+      
+      this.viewMode = false;
+    },
+    
+    async loadPartsOfSpeech(langCode) {
+      if (!langCode) {
+        this.editPartsOfSpeech = [];
+        return;
+      }
+      
+      try {
+        const partsOfSpeech = await fetchPartsOfSpeech(langCode);
+        this.editPartsOfSpeech = partsOfSpeech.map(pos => pos.code);
+      } catch (error) {
+        console.error('Failed to load parts of speech:', error);
+        this.editPartsOfSpeech = [];
+      }
+    },
+    
+    async onEditLanguageChange() {
+      await this.loadPartsOfSpeech(this.editForm.language_code);
+    },
+    
+    async saveWord() {
+      if (this.isSaving) return;
+      
+      this.isSaving = true;
+      
+      try {
+        const tags = this.editForm.tagsRaw.trim() 
+          ? this.editForm.tagsRaw.split(',').map(t => t.trim()).filter(Boolean) 
+          : null;
+        
+        const body = {
+          word: this.editForm.word.trim(),
+          word_scripted: this.editForm.word_scripted.trim() || null,
+          def_en: this.editForm.def_en.trim() || null,
+          pos: this.editForm.pos.trim() || null,
+          class: this.editForm.class.trim() || null,
+          language_code: this.editForm.language_code.trim() || null,
+          etymology: this.editForm.etymology.trim() || null,
+          example: this.editForm.example.trim() || null,
+          tags: tags,
+        };
+        
+        await updateWord(this.id, body);
+        
+        // Reload word data and switch back to view mode
+        await this.loadWord();
+        this.viewMode = true;
+      } catch (error) {
+        console.error('Save failed:', error);
+        alert('Save failed. Please try again.');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+    
+    cancelEdit() {
+      this.viewMode = true;
+    },
+    
+    goBack() {
+      window.location.href = '/dictionary';
     }
-  }
-
-  async function loadWord() {
-    const res = await fetch(`/api/words/${id}`);
-    const content = document.getElementById('content');
-    if (!res.ok) {
-      content.innerHTML = '<div class="empty">Word not found.</div>';
-      return;
-    }
-    const w = await res.json();
-    document.title = `Word: ${w.word} ⋄ Conlexa`;
-    renderView(w);
-  }
-
-  loadFilters();
-  loadWord();
+  }));
+});
 </script>
+
 </body>
 </html>

@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" x-data="dictionary">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Dictionary ⋄ Conlexa</title>
 <link rel="stylesheet" href="/style.css"/>
+<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
 </head>
 <body>
 
@@ -17,310 +18,323 @@
   <aside>
     <div class="filter-group">
       <label>Part of Speech</label>
-      <select id="pos-filter">
+      <select x-model="filters.part_of_speech" @change="onFilterChange">
         <option value="">all</option>
+        <template x-for="pos in partsOfSpeech" :key="pos.code">
+          <option :value="pos.code" x-text="pos.code"></option>
+        </template>
       </select>
     </div>
 
     <div class="filter-group">
       <label>Language</label>
-      <select id="lang-filter">
-        <option value="">(no languages added)</option>
+      <select x-model="filters.language_code" @change="onLanguageChange">
+        <option x-show="languages.length === 0" value="">(no languages added)</option>
+        <template x-for="lang in languages" :key="lang.code">
+          <option :value="lang.code" x-text="lang.name_en ? lang.name_en : lang.code.toUpperCase()"></option>
+        </template>
       </select>
     </div>
 
-    <!-- <button class="reset-btn" onclick="resetFilters()">Reset filters</button> -->
+    <!-- <button class="reset-btn" @click="resetFilters">Reset filters</button> -->
 
     <a href="/add" class="reset-btn" style="display:block;text-align:center;text-decoration:none;color:var(--accent);border-color:var(--accent-dim)">+ Add word</a>
 
     <div class="stat">
-      <span id="total-count">—</span>
+      <span x-text="totalWords.toLocaleString()">—</span>
       words found
     </div>
   </aside>
 
   <main>
     <div class="search">
-      <input type="text" id="search-input" placeholder="Search..." disabled />
-      <button id="search-clear" onclick="document.getElementById('search-input').value=''; loadWords();" disabled>×</button>
-      <button id="search-toggle" onclick="toggleSearchField()" disabled>in: words</button>
-      <button id="search-btn" onclick="searchWords()" disabled><svg class="icon" viewBox="0 0 8.4666666 8.4666666"><use href="/res/icons.svg#search"/></svg></button>
+      <input type="text" x-model="searchQuery" placeholder="Search..." :disabled="isLoading" @keydown.enter="searchWords" />
+      <button @click="clearSearch" :disabled="isLoading || !searchQuery">×</button>
+      <button @click="toggleSearchField" :disabled="isLoading" x-text="searchTargetLabel"></button>
+      <button @click="searchWords" :disabled="isLoading"><svg class="icon" viewBox="0 0 8.4666666 8.4666666"><use href="/res/icons.svg#search"/></svg></button>
     </div>
-    <div class="results-meta" id="results-meta">Loading…</div>
-    <div id="table-container"><div class="loading">Loading</div></div>
-    <div class="pagination" id="pagination" style="display:none"></div>
+    <div class="results-meta" x-text="resultsMeta">Loading…</div>
+    <div id="table-container">
+      <div class="loading" x-show="isLoading">Loading</div>
+      <div class="empty" x-show="!isLoading && words.length === 0 && !searchQuery">No words match the current filters.</div>
+      <div class="empty" x-show="!isLoading && words.length === 0 && searchQuery">No results found.</div>
+      
+      <table x-show="!isLoading && words.length > 0">
+        <thead>
+          <tr>
+            <th>Word</th>
+            <th>Part of Speech</th>
+            <th>Language</th>
+            <th>Definition</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="word in words" :key="word.id">
+            <tr>
+              <td class="word-cell"><a class="entry-link" :href="'/word/' + word.id" x-text="esc(word.word)"></a></td>
+              <td>
+                <template x-if="word.pos">
+                  <span class="pos-badge" x-text="word.pos"></span>
+                  <span class="etymology" x-text="word.class || ''"></span>
+                </template>
+                <template x-if="!word.pos">
+                  <span style="color:var(--text-dimmer)">—</span>
+                </template>
+              </td>
+              <td>
+                <template x-if="word.language_code">
+                  <span class="lang-badge" x-text="word.language_code"></span>
+                </template>
+              </td>
+              <td>
+                <div class="definition" x-html="getDefinitionSnippet(word.def_en)"></div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="pagination" x-show="totalPages > 1" style="display:flex">
+      <button class="page-btn" @click="prevPage" :disabled="currentPage === 0">← Prev</button>
+      
+      <template x-for="i in visiblePages" :key="i">
+        <button class="page-btn" :class="{ 'active': i === currentPage + 1 }" @click="goToPage(i - 1)" x-text="i"></button>
+      </template>
+      
+      <button class="page-btn" @click="nextPage" :disabled="currentPage >= totalPages - 1">Next →</button>
+      
+      <span class="page-info" x-text="'Page ' + (currentPage + 1) + ' of ' + totalPages"></span>
+    </div>
   </main>
 </div>
 
+<script src="/js/utils.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/store.js"></script>
+
 <script>
-  const PAGE_SIZE = 50;
-  let currentPage = 0;
-  let totalWords = 0;
-
-  async function loadLanguages(defaultLangCode = '') {
-    const langSelect = document.getElementById('lang-filter');
-    const res = await fetch('/api/langs');
-    if (!res.ok) return;
+document.addEventListener('alpine:init', () => {
+  Alpine.data('dictionary', () => ({
+    // Constants
+    PAGE_SIZE: 50,
     
-    const data = await res.json();
-    if (data.langs && data.langs.length > 0) {
-      langSelect.innerHTML = '';
-      data.langs.forEach(l => {
-        const opt = document.createElement('option');
-        opt.value = l.code;
-        // opt.textContent = l.code.toUpperCase() + (l.name_en ? ` - ${l.name_en}` : '');
-        opt.textContent = l.name_en ? l.name_en : l.code.toUpperCase();
-        langSelect.appendChild(opt);
-      });
-      // Select default language if provided and exists
-      if (defaultLangCode) {
-        langSelect.value = defaultLangCode;
+    // State
+    filters: {
+      part_of_speech: '',
+      language_code: '',
+    },
+    languages: [],
+    partsOfSpeech: [],
+    words: [],
+    totalWords: 0,
+    currentPage: 0,
+    isLoading: false,
+    searchQuery: '',
+    searchTarget: 'words', // 'words', 'definitions', 'tags'
+    
+    // Computed properties
+    get totalPages() {
+      return Math.ceil(this.totalWords / this.PAGE_SIZE);
+    },
+    
+    get searchTargetLabel() {
+      const labels = { words: 'in: words', definitions: 'in: definitions', tags: 'in: tags' };
+      return labels[this.searchTarget] || 'in: words';
+    },
+    
+    get resultsMeta() {
+      if (this.isLoading) return 'Loading…';
+      if (this.searchQuery && this.words.length > 0) {
+        return `${this.words.length} result${this.words.length !== 1 ? 's' : ''} for "${this.searchQuery}"`;
       }
-    }
-  }
-
-  async function loadPartsOfSpeech(langCode) {
-    const posSelect = document.getElementById('pos-filter');
-    // Clear existing options except "all" and reset value
-    while (posSelect.options.length > 1) {
-      posSelect.remove(1);
-    }
-    posSelect.value = '';
+      if (this.words.length === 0) return 'No results';
+      const start = this.currentPage * this.PAGE_SIZE + 1;
+      const end = Math.min(start + this.words.length - 1, this.totalWords);
+      return `Showing ${start}–${end} of ${this.totalWords.toLocaleString()} entries`;
+    },
     
-    if (!langCode) {
-      return;
-    }
-    
-    const res = await fetch(`/api/langs/${encodeURIComponent(langCode)}`);
-    if (!res.ok) return;
-    
-    const langData = await res.json();
-    if (langData.parts_of_speech && langData.parts_of_speech.length > 0) {
-      langData.parts_of_speech.forEach(pos => {
-        const opt = document.createElement('option');
-        opt.value = pos.code;
-        opt.textContent = pos.code;
-        posSelect.appendChild(opt);
-      });
-    }
-  }
-
-  function getFilters() {
-    return {
-      part_of_speech: document.getElementById('pos-filter').value,
-      language_code: document.getElementById('lang-filter').value,
-    };
-  }
-
-  function renderWordTable(words) {
-    const table = document.createElement('table');
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th>Word</th>
-          <th>Part of Speech</th>
-          <th>Language</th>
-          <th>Definition</th>
-        </tr>
-      </thead>
-    `;
-    const tbody = document.createElement('tbody');
-    words.forEach(w => {
-      const tr = document.createElement('tr');
-      const defSnippet = esc(w.def_en) ? (w.def_en.length > 50 ? esc(w.def_en).substring(0, 50).split(' ').slice(0, -1).join(' ') + `<span style="color:var(--text-dimmer)"> ...</span>` : esc(w.def_en)) : '';
-      tr.innerHTML = `
-        <td class="word-cell"><a class="entry-link" href="/word/${w.id}">${esc(w.word)}</a></td>
-        <td>${w.pos ? `<span class="pos-badge">${esc(w.pos)}</span> <span class="etymology">${esc(w.class || '')}</span>` : '<span style="color:var(--text-dimmer)">—</span>'}</td>
-        <td>${w.language_code ? `<span class="lang-badge">${esc(w.language_code)}</span>` : ''}</td>
-        <td><div class="definition">${defSnippet}</div></td>
-      `;
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    return table;
-  }
-
-  async function loadWords() {
-    const container = document.getElementById('table-container');
-    container.innerHTML = '<div class="loading">Loading</div>';
-
-    const { part_of_speech, language_code } = getFilters();
-    const params = new URLSearchParams({ limit: PAGE_SIZE, offset: currentPage * PAGE_SIZE });
-    if (part_of_speech) params.set('part_of_speech', part_of_speech);
-    if (language_code) params.set('language_code', language_code);
-
-    const res = await fetch('/api/words?' + params);
-    const data = await res.json();
-    totalWords = data.total;
-
-    document.getElementById('total-count').textContent = totalWords.toLocaleString();
-    document.getElementById('results-meta').textContent =
-      `Showing ${data.words.length ? currentPage * PAGE_SIZE + 1 : 0}–${currentPage * PAGE_SIZE + data.words.length} of ${totalWords.toLocaleString()} entries`;
-
-    if (!data.words.length) {
-      container.innerHTML = '<div class="empty">No words match the current filters.</div>';
-      document.getElementById('pagination').style.display = 'none';
-      return;
-    }
-
-    container.innerHTML = '';
-    container.appendChild(renderWordTable(data.words));
-
-    document.getElementById('search-input').disabled = false;
-    document.getElementById('search-btn').disabled = false;
-    document.getElementById('search-toggle').disabled = false;
-
-    renderPagination();
-  }
-
-  function renderPagination() {
-    const pag = document.getElementById('pagination');
-    const totalPages = Math.ceil(totalWords / PAGE_SIZE);
-    if (totalPages <= 1) { pag.style.display = 'none'; return; }
-    pag.style.display = 'flex';
-    pag.innerHTML = '';
-
-    const prev = document.createElement('button');
-    prev.className = 'page-btn';
-    prev.textContent = '← Prev';
-    prev.disabled = currentPage === 0;
-    prev.onclick = () => { currentPage--; loadWords(); window.scrollTo(0,0); };
-    pag.appendChild(prev);
-
-    // Show page numbers around current
-    const start = Math.max(0, currentPage - 2);
-    const end = Math.min(totalPages - 1, currentPage + 2);
-    for (let i = start; i <= end; i++) {
-      const btn = document.createElement('button');
-      btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
-      btn.textContent = i + 1;
-      btn.onclick = ((_i) => () => { currentPage = _i; loadWords(); window.scrollTo(0,0); })(i);
-      pag.appendChild(btn);
-    }
-
-    const next = document.createElement('button');
-    next.className = 'page-btn';
-    next.textContent = 'Next →';
-    next.disabled = currentPage >= totalPages - 1;
-    next.onclick = () => { currentPage++; loadWords(); window.scrollTo(0,0); };
-    pag.appendChild(next);
-
-    const info = document.createElement('span');
-    info.className = 'page-info';
-    info.textContent = `Page ${currentPage + 1} of ${totalPages}`;
-    pag.appendChild(info);
-  }
-
-  // async function resetFilters() {
-  //   document.getElementById('pos-filter').value = '';
-  //   document.getElementById('lang-filter').value = '';
-  //   await loadPartsOfSpeech('');
-  //   currentPage = 0;
-  //   loadWords();
-  // }
-
-  function esc(str) {
-    if (!str) return '';
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  document.getElementById('pos-filter').addEventListener('change', () => { 
-    currentPage = 0;
-    if (document.getElementById('search-input').value.trim()) {
-      searchWords();
-    } else {
-      loadWords();
-    }
-  });
-  document.getElementById('lang-filter').addEventListener('change', async () => { 
-    const langCode = document.getElementById('lang-filter').value;
-    await loadPartsOfSpeech(langCode);
-    currentPage = 0;
-    if (document.getElementById('search-input').value.trim()) {
-      searchWords();
-    } else {
-      loadWords();
-    } 
-  });
-
-  async function initializePage() {
-    // Get default language (language with most words)
-    const defaultRes = await fetch('/api/default/lang');
-    let defaultLangCode = '';
-    if (defaultRes.ok) {
-      const defaultData = await defaultRes.json();
-      if (defaultData.language_code) {
-        defaultLangCode = defaultData.language_code;
+    get visiblePages() {
+      const start = Math.max(0, this.currentPage - 2);
+      const end = Math.min(this.totalPages - 1, this.currentPage + 2);
+      const pages = [];
+      for (let i = start; i <= end; i++) {
+        pages.push(i + 1);
       }
-    }
+      return pages;
+    },
     
-    // Load languages with default selection
-    await loadLanguages(defaultLangCode);
+    // Lifecycle
+    async init() {
+      await this.loadLanguages();
+      await this.loadDefaultLanguage();
+      await this.loadWords();
+    },
     
-    // Load parts of speech for default language if set
-    if (defaultLangCode) {
-      await loadPartsOfSpeech(defaultLangCode);
-    }
+    // Methods
+    esc(str) {
+      // Use global esc function from utils.js
+      return window.esc ? window.esc(str) : (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    },
     
-    // Load words with current filters (which may include the default language)
-    loadWords();
-  }
-
-  function toggleSearchField() {
-    const btn = document.getElementById('search-toggle');
-    if (btn.textContent === 'in: words') {
-      btn.textContent = 'in: definitions';
-    } else if (btn.textContent === 'in: definitions') {
-      btn.textContent = 'in: tags';
-    } else {
-      btn.textContent = 'in: words';
-    }
-    searchWords();
-  }
-
-  async function searchWords() {
-    const query = document.getElementById('search-input').value.trim();
-
-    if (!query) {
-      currentPage = 0;
-      loadWords();
-      return;
-    }
-
-    const toggleBtn = document.getElementById('search-toggle');
-    const targetMap = { 'in: words': 'words', 'in: definitions': 'definitions', 'in: tags': 'tags' };
-    const target = targetMap[toggleBtn.textContent] || 'words';
-
-    const container = document.getElementById('table-container');
-    container.innerHTML = '<div class="loading">Searching…</div>';
-    document.getElementById('pagination').style.display = 'none';
-
-    const { part_of_speech, language_code } = getFilters(); 
-    const params = new URLSearchParams({ query, target, limit: 100 });
-    if (part_of_speech) params.append('pos', part_of_speech);
-    if (language_code) params.append('language_code', language_code);
-    const res = await fetch('/api/search?' + params);
-    const data = await res.json();
-    const results = data.results;
-
-    document.getElementById('total-count').textContent = results.length.toLocaleString();
-    document.getElementById('results-meta').textContent =
-      `${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`;
-
-    if (!results.length) {
-      container.innerHTML = '<div class="empty">No results found.</div>';
-      return;
-    }
-
-    container.innerHTML = '';
-    container.appendChild(renderWordTable(results));
-  }
-
-  document.getElementById('search-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') searchWords();
-  });
-
-  initializePage();
+    getDefinitionSnippet(def) {
+      if (!def) return '';
+      const escaped = esc(def); // Use global esc function
+      if (def.length > 50) {
+        return escaped.substring(0, 50).split(' ').slice(0, -1).join(' ') + '<span style="color:var(--text-dimmer)"> ...</span>';
+      }
+      return escaped;
+    },
+    
+    async loadLanguages() {
+      try {
+        const langs = await fetchLanguages();
+        this.languages = langs;
+      } catch (error) {
+        console.error('Failed to load languages:', error);
+      }
+    },
+    
+    async loadDefaultLanguage() {
+      try {
+        const defaultLangCode = await fetchDefaultLanguage();
+        if (defaultLangCode) {
+          this.filters.language_code = defaultLangCode;
+          await this.loadPartsOfSpeech(defaultLangCode);
+        }
+      } catch (error) {
+        console.error('Failed to load default language:', error);
+      }
+    },
+    
+    async loadPartsOfSpeech(langCode) {
+      if (!langCode) {
+        this.partsOfSpeech = [];
+        return;
+      }
+      
+      try {
+        const partsOfSpeech = await fetchPartsOfSpeech(langCode);
+        this.partsOfSpeech = partsOfSpeech;
+      } catch (error) {
+        console.error('Failed to load parts of speech:', error);
+      }
+    },
+    
+    async loadWords() {
+      if (this.searchQuery) {
+        await this.searchWords();
+        return;
+      }
+      
+      this.isLoading = true;
+      try {
+        const data = await fetchWords({
+          part_of_speech: this.filters.part_of_speech,
+          language_code: this.filters.language_code,
+          limit: this.PAGE_SIZE,
+          offset: this.currentPage * this.PAGE_SIZE
+        });
+        
+        this.words = data.words || [];
+        this.totalWords = data.total || 0;
+      } catch (error) {
+        console.error('Failed to load words:', error);
+        this.words = [];
+        this.totalWords = 0;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    async searchWords() {
+      if (!this.searchQuery.trim()) {
+        this.currentPage = 0;
+        await this.loadWords();
+        return;
+      }
+      
+      this.isLoading = true;
+      try {
+        const results = await fetchSearchResults(
+          this.searchQuery, 
+          this.searchTarget, 
+          { 
+            part_of_speech: this.filters.part_of_speech, 
+            language_code: this.filters.language_code 
+          }
+        );
+        
+        this.words = results;
+        this.totalWords = results.length;
+        this.currentPage = 0; // Reset pagination for search results
+      } catch (error) {
+        console.error('Search failed:', error);
+        this.words = [];
+        this.totalWords = 0;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    toggleSearchField() {
+      const order = ['words', 'definitions', 'tags'];
+      const currentIndex = order.indexOf(this.searchTarget);
+      this.searchTarget = order[(currentIndex + 1) % order.length];
+      if (this.searchQuery) {
+        this.searchWords();
+      }
+    },
+    
+    clearSearch() {
+      this.searchQuery = '';
+      this.currentPage = 0;
+      this.loadWords();
+    },
+    
+    onFilterChange() {
+      this.currentPage = 0;
+      this.loadWords();
+    },
+    
+    async onLanguageChange() {
+      await this.loadPartsOfSpeech(this.filters.language_code);
+      this.currentPage = 0;
+      this.loadWords();
+    },
+    
+    prevPage() {
+      if (this.currentPage > 0) {
+        this.currentPage--;
+        this.loadWords();
+        window.scrollTo(0, 0);
+      }
+    },
+    
+    nextPage() {
+      if (this.currentPage < this.totalPages - 1) {
+        this.currentPage++;
+        this.loadWords();
+        window.scrollTo(0, 0);
+      }
+    },
+    
+    goToPage(page) {
+      this.currentPage = page;
+      this.loadWords();
+      window.scrollTo(0, 0);
+    },
+    
+    // resetFilters() {
+    //   this.filters.part_of_speech = '';
+    //   this.filters.language_code = '';
+    //   this.partsOfSpeech = [];
+    //   this.currentPage = 0;
+    //   this.loadWords();
+    // }
+  }));
+});
 </script>
+
 </body>
 </html>
