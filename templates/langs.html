@@ -62,56 +62,55 @@
             <h3>Grammar Tables</h3>
 
             <!-- List view -->
-            <!-- <template> -->
-              <div>
-                <!-- the tables -->
-                <div class="table-list" x-show="grammarTables.length > 0">
-                  <template x-for="gt in grammarTables" :key="gt.id">
-                    <div class="table-view">
-                      <span x-text="gt.table_name" style="flex-grow:1"></span>
-                      <span class="etymology" x-text="gt.apply_on" x-show="gt.apply_on"></span>
+            <div>
+              <!-- the tables -->
+              <div class="table-list" x-show="grammarTables.length > 0">
+                <template x-for="gt in grammarTables" :key="gt.id">
+                  <div class="table-view">
+                    <span x-text="gt.table_name" style="flex-grow:1"></span>
+                    <span class="etymology" x-text="gt.apply_on" x-show="gt.apply_on"></span>
 
-                      <a class="delete-button" :href="'/grammar-table.html?lang=' + selectedLanguage.code + '&id=' + gt.id">edit</a>
-                      <button class="delete-button" @click="removeGrammarTable(gt.id)">delete</button>
+                    <a class="delete-button" :href="'/grammar-table.html?lang=' + selectedLanguage.code + '&id=' + gt.id">edit</a>
+                    <button class="delete-button" @click="removeGrammarTable(gt.id)">delete</button>
 
-                      <table class="grammar-table">
-                        <thead>
+                    <table class="grammar-table">
+                      <thead>
+                        <tr>
+                          <th></th>
+                          <template x-for="col in gt.col_order" :key="col">
+                            <th style="min-width:80px;" x-text="col"></th>
+                          </template>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="row in gt.row_order" :key="row">
                           <tr>
-                            <th></th>
+                            <td style="white-space:nowrap;" x-text="row"></td>
                             <template x-for="col in gt.col_order" :key="col">
-                              <th style="min-width:80px;" x-text="col"></th>
+                              <td style="min-width:5em;" x-text="(gt.data[row] || {})[col]"></td>
                             </template>
                           </tr>
-                        </thead>
-                        <tbody>
-                          <template x-for="row in gt.row_order" :key="row">
-                            <tr>
-                              <td style="white-space:nowrap;" x-text="row"></td>
-                              <template x-for="col in gt.col_order" :key="col">
-                                <td style="min-width:5em;" x-text="(gt.data[row] || {})[col]"></td>
-                              </template>
-                            </tr>
-                          </template>
-                        </tbody>
-                      </table>
-                    </div>
-                  </template>
-                </div>
-                <p class="empty" x-show="grammarTables.length === 0" style="text-align:left;padding:0.5rem 0;">No grammar tables defined.</p>
-
-                <div class="inline-inputs" x-show="showAddTableForm" style="margin-top:1rem;">
-                  <input type="text" x-model="newTableName" placeholder="TABLE NAME" class="edit-field"/>
-                  <input type="text" x-model="newTableApplyOn" placeholder="APPLY ON (POS)" class="edit-field" maxlength="10"/>
-                  <input type="text" x-model="newTableRows" placeholder="ROWS (comma-separated)" class="edit-field" />
-                  <input type="text" x-model="newTableCols" placeholder="COLS (comma-separated)" class="edit-field" />
-                  <button class="inline-submit-btn" @click="addGrammarTable">Create</button>
-                  <button class="inline-submit-btn" @click="showAddTableForm = false; newTableName = ''; newTableApplyOn = ''">Cancel</button>
-                </div>
-                <div style="color:var(--text-dim); font-size: 0.9em; margin-top: 0.5rem;">
-                  <button class="info-button" @click="showAddTableForm = true">+</button> Add grammar table
-                </div>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
               </div>
-            <!-- </template> -->
+              <p class="empty" x-show="grammarTables.length === 0" style="text-align:left;padding:0.5rem 0;">No grammar tables defined.</p>
+
+              <div class="inline-inputs" x-show="showAddTableForm" style="margin-top:1rem;">
+                <input type="text" x-model="newTableName" placeholder="TABLE NAME" class="edit-field"/>
+                <input type="text" x-model="newTableApplyOn" placeholder="APPLY ON (POS)" class="edit-field" maxlength="10"/>
+                <input type="text" x-model="newTableRows" placeholder="ROWS (comma-separated)" class="edit-field" />
+                <input type="text" x-model="newTableCols" placeholder="COLS (comma-separated)" class="edit-field" />
+                <button class="inline-submit-btn" @click="addGrammarTable">Create</button>
+                <button class="inline-submit-btn" @click="showAddTableForm = false; newTableName = ''; newTableApplyOn = ''">Cancel</button>
+              </div>
+              <div style="color:var(--text-dim); font-size: 0.9em; margin-top: 0.5rem;">
+                <button class="info-button" @click="showAddTableForm = true">+</button> Add grammar table
+              </div>
+            </div>
+
 
 
           </div>

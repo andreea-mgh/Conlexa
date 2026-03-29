@@ -624,3 +624,7 @@ ul.list-block li .pos-name {
   cursor: pointer;
   transition: all 0.2s;
 }
+
+.table-view {
+  margin-bottom: 2rem;
+}

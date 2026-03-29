@@ -69,6 +69,41 @@
             <div style="font-size:14px;font-style:italic;color:var(--text-dim)" x-text="wordData.example"></div>
           </div>
         </template>
+
+        <template x-if="grammarTables.length > 0">
+          <div class="section-block">
+            <div class="section-label">Grammar Tables</div>
+            <div style="display:flex;flex-direction:column;gap:1rem">
+              <template x-for="table in grammarTables" :key="table.id">
+                <div class="table-view">
+                  <div style="font-weight:bold;margin-bottom:0.5rem" x-text="table.title"></div>
+                  <div style="overflow:auto">
+                    <table class="grammar-table">
+                      <thead>
+                        <tr>
+                          <th></th>
+                          <template x-for="col in table.col_order" :key="col">
+                            <th x-text="col"></th>
+                          </template>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="row in table.row_order" :key="row">
+                          <tr>
+                            <td style="font-weight:bold" x-text="row"></td>
+                            <template x-for="col in table.col_order" :key="col">
+                              <td x-text="table.data[row][col]"></td>
+                            </template>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
       </div>
     </template>
 
@@ -140,6 +175,7 @@ document.addEventListener('alpine:init', () => {
     wordData: null,
     viewMode: true,
     ipaResult: '',
+    grammarTables: [],
 
     // Edit mode state
     languageCodes: [],
@@ -187,6 +223,7 @@ document.addEventListener('alpine:init', () => {
 
         if (w.grammar_tables && w.grammar_tables.length > 0) {
           console.log("Matched grammar tables: ", w.grammar_tables);
+          this.grammarTables = w.grammar_tables;
         }
 
         // Load IPA if language code exists
