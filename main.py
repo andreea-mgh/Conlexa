@@ -205,6 +205,53 @@ def delete_part_of_speech(lang_code: str, pos_code: str):
             )
     return {"ok": True}
 
+
+@app.get("/api/langs/{lang_code}/grammar_tables")
+def get_grammar_tables(lang_code: str):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM grammar_tables WHERE target_language = %s",
+                (lang_code,),
+            )
+            return [dict(r) for r in cur.fetchall()]
+
+@app.get("/api/grammar_tables/{table_id}")
+def get_grammar_table(table_id: int):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM grammar_tables WHERE id = %s",
+                (table_id,),
+            )
+            row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Grammar table not found")
+    return dict(row)
+
+@app.post("/api/langs/{lang_code}/grammar_tables", status_code=201)
+def create_grammar_table(lang_code: str, body: dict[str, Any] = Body(...)):
+    table_name = body.get("table_name")
+    apply_on = body.get("apply_on")
+    row_order = body.get("row_order")
+    col_order = body.get("col_order")
+    data = body.get("data")
+    if not table_name or not data:
+        raise HTTPException(status_code=400, detail="'table_name' and 'data' are required")
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            # Check if language exists
+            cur.execute("SELECT 1 FROM langs WHERE code = %s", (lang_code,))
+            if cur.fetchone() is None:
+                raise HTTPException(status_code=404, detail="Language not found")
+            # Insert new grammar table
+            cur.execute(
+                "INSERT INTO grammar_tables (target_language, table_name, apply_on, row_order, col_order, data) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                (lang_code, table_name, apply_on, row_order, col_order, psycopg2.extras.Json(data)),
+            )
+            new_id = cur.fetchone()[0]
+    return {"id": new_id}
+
 @app.get("/api/filters")
 def get_filters():
     with get_conn() as conn:
@@ -292,6 +339,13 @@ def search_words(
                 """, (f"%{query}%", f"%{query}%", f"%{query}%", limit))
             rows = cur.fetchall()
     return {"results": [dict(r) for r in rows]}
+
+
+
+
+
+
+# Frontend routes
 
 @app.get("/add")
 def add_page():

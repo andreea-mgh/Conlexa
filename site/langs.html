@@ -66,10 +66,66 @@
               <input type="text" x-model="newPosName" placeholder="NAME" class="edit-field"/>
               <button class="inline-submit-btn" @click="addPartOfSpeech">Add</button>
             </div>
-            <div style="color:var(--text-dim); font-size: 0.9em; margin-top: 0.5rem;">
+            <div style="color:var(--text-dim); font-size: 0.9em; margin-top: 0.5rem; margin-bottom:1.5rem;">
               <button class="info-button" @click="showAddPosForm = true">+</button> Add part of speech
             </div>
+
+            <h3>Grammar Tables</h3>
+
+            <!-- List view -->
+            <!-- <template> -->
+              <div>
+                <!-- the tables -->
+                <div class="table-list" x-show="grammarTables.length > 0">
+                  <template x-for="gt in grammarTables" :key="gt.id">
+                    <div class="table-view">
+                      <span x-text="gt.table_name" style="flex-grow:1"></span>
+                      <span class="etymology" x-text="gt.apply_on" x-show="gt.apply_on"></span>
+
+                      <a class="delete-button" :href="'/grammar-table.html?lang=' + selectedLanguage.code + '&id=' + gt.id">edit</a>
+                      <button class="delete-button" @click="removeGrammarTable(gt.id)">delete</button>
+
+                      <table class="grammar-table">
+                        <thead>
+                          <tr>
+                            <th></th>
+                            <template x-for="col in gt.col_order" :key="col">
+                              <th style="min-width:80px;" x-text="col"></th>
+                            </template>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="row in gt.row_order" :key="row">
+                            <tr>
+                              <td style="white-space:nowrap;" x-text="row"></td>
+                              <template x-for="col in gt.col_order" :key="col">
+                                <td style="min-width:5em;" x-text="(gt.data[row] || {})[col]"></td>
+                              </template>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                    </div>
+                  </template>
+                </div>
+                <p class="empty" x-show="grammarTables.length === 0" style="text-align:left;padding:0.5rem 0;">No grammar tables defined.</p>
+
+                <div class="inline-inputs" x-show="showAddTableForm" style="margin-top:1rem;">
+                  <input type="text" x-model="newTableName" placeholder="TABLE NAME" class="edit-field"/>
+                  <input type="text" x-model="newTableApplyOn" placeholder="APPLY ON (POS)" class="edit-field" style="width:13em;flex-grow:unset" maxlength="10"/>
+                  <button class="inline-submit-btn" @click="addGrammarTable">Create</button>
+                  <button class="inline-submit-btn" @click="showAddTableForm = false; newTableName = ''; newTableApplyOn = ''">Cancel</button>
+                </div>
+                <div style="color:var(--text-dim); font-size: 0.9em; margin-top: 0.5rem;">
+                  <button class="info-button" @click="showAddTableForm = true">+</button> Add grammar table
+                </div>
+              </div>
+            <!-- </template> -->
+
+
           </div>
+
+
           <h2>Phonology</h2>
           <div class="section-block">
             <div class="section-label">IPA Ruleset <a :href="'/phono/ipa/' + selectedLanguage.code" target="_blank">(Edit)</a></div>
@@ -101,8 +157,11 @@ document.addEventListener('alpine:init', () => {
     showAddPosForm: false,
     newPosCode: '',
     newPosName: '',
-    
-    // Computed
+    // Grammar table state
+    grammarTables: [],
+    showAddTableForm: false,
+    newTableName: '',
+    newTableApplyOn: '',
     get pageTitle() {
       if (this.isLoading) return 'Languages';
       return this.selectedLanguage ? 'Language Details' : 'Languages';
@@ -142,6 +201,7 @@ document.addEventListener('alpine:init', () => {
         const lang = await fetchLanguage(code);
         this.selectedLanguage = lang;
         document.title = `${lang.name_en} (${lang.code}) ⋄ Conlexa`;
+        await this.loadGrammarTables(lang.code);
       } catch (error) {
         console.error('Failed to load language:', error);
         this.error = `Language "${esc(code)}" not found.`;
@@ -166,6 +226,8 @@ document.addEventListener('alpine:init', () => {
         this.showAddPosForm = false;
         this.newPosCode = '';
         this.newPosName = '';
+        this.grammarTables = [];
+        this.showAddTableForm = false;
         
         // Update URL
         const url = new URL(window.location);
@@ -204,9 +266,9 @@ document.addEventListener('alpine:init', () => {
     
     async deletePartOfSpeech(posCode) {
       if (!this.selectedLanguage) return;
-      
+
       if (!confirm(`Are you sure you want to delete part of speech "${posCode}"?`)) return;
-      
+
       try {
         await deletePartOfSpeech(this.selectedLanguage.code, posCode);
         // Reload language details
@@ -215,7 +277,48 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to delete part of speech:', error);
         alert(`Failed to delete part of speech. ${error.message}`);
       }
-    }
+    },
+
+    // Grammar table methods
+    async loadGrammarTables(langCode) {
+      try {
+        this.grammarTables = await fetchGrammarTables(langCode);
+      } catch (e) {
+        console.error('Failed to load grammar tables:', e);
+        this.grammarTables = [];
+      }
+    },
+
+    async addGrammarTable() {
+      if (!this.selectedLanguage) return;
+      const name = this.newTableName.trim();
+      if (!name) { alert('Table name is required.'); return; }
+      try {
+        const gt = await createGrammarTable(this.selectedLanguage.code, {
+          table_name: name,
+          apply_on: this.newTableApplyOn.trim() || null,
+          data: {},
+          row_order: [],
+          col_order: [],
+        });
+        window.location.href = `/grammar-table.html?lang=${encodeURIComponent(this.selectedLanguage.code)}&id=${gt.id}`;
+      } catch (e) {
+        console.error('Failed to create grammar table:', e);
+        alert('Failed to create grammar table.');
+      }
+    },
+
+    async removeGrammarTable(tableId) {
+      if (!this.selectedLanguage) return;
+      if (!confirm('Delete this grammar table?')) return;
+      try {
+        await deleteGrammarTable(this.selectedLanguage.code, tableId);
+        await this.loadGrammarTables(this.selectedLanguage.code);
+      } catch (e) {
+        console.error('Failed to delete grammar table:', e);
+        alert('Failed to delete grammar table.');
+      }
+    },
   }));
 });
 </script>

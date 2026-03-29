@@ -26,6 +26,16 @@ CREATE TABLE IF NOT EXISTS langs
     name_native text
 )
 
+CREATE TABLE grammar_tables (
+    id SERIAL PRIMARY KEY,
+	table_name VARCHAR(150),
+	target_language VARCHAR(10) NOT NULL,
+    row_order TEXT[] NOT NULL,
+    col_order TEXT[] NOT NULL,
+	apply_on TEXT,
+	data JSONB
+);
+
 
 ALTER TABLE IF EXISTS words
     OWNER to conlexa; -- db username here
@@ -35,14 +45,3 @@ ALTER TABLE IF EXISTS parts_of_speech
 
 ALTER TABLE IF EXISTS langs
     OWNER to conlexa; -- db username here
-
-
-INSERT INTO parts_of_speech (code, name_en) VALUES
-('N', 'noun'),
-('V', 'verb'),
-('ADJ', 'adjective'),
-('ADV', 'adverb'),
-('ADP', 'adposition'),
-('P', 'pronoun'),
-('PTC', 'particle'),
-('NUM', 'numeral');

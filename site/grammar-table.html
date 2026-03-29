@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" x-data="grammarTableEditor">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Grammar Table ⋄ Conlexa</title>
+<link rel="stylesheet" href="/style.css"/>
+<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1><a href="/" class="entry-link">Conlexa</a></h1>
+  <span class="subtitle" x-text="pageTitle">Grammar Table</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <button class="reset-btn" @click="goBack">← Back</button>
+  </aside>
+
+  <main id="main" class="main-flex">
+    <div class="loading" x-show="isLoading">Loading</div>
+    <div class="empty" x-show="!isLoading && error" x-text="error"></div>
+
+    <template x-if="!isLoading && !error">
+      <div>
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+          <input type="text" x-model="tableName" class="edit-field" style="width:auto;flex-grow:1;" placeholder="Table name"/>
+          <input type="text" x-model="tableApplyOn" class="edit-field" style="width:10em;" placeholder="Apply on (POS)" maxlength="10"/>
+        </div>
+
+        <div style="overflow-x:auto;margin-bottom:1.5rem;">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <template x-for="col in colOrder" :key="col">
+                  <th style="min-width:80px;">
+                    <span x-text="col"></span>
+                    <button class="delete-button" style="margin-left:0.4rem;font-size:0.65rem;height:1.5em;" @click="removeCol(col)">×</button>
+                  </th>
+                </template>
+                <th style="min-width:120px;">
+                  <div class="inline-inputs" style="gap:0.25rem;">
+                    <input type="text" x-model="newColKey" placeholder="COL" class="edit-field" style="width:5em;" @keydown.enter="addCol"/>
+                    <button class="inline-submit-btn" style="padding:0.3rem 0.5rem;" @click="addCol">+</button>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in rowOrder" :key="row">
+                <tr>
+                  <td style="white-space:nowrap;">
+                    <span class="pos-badge" x-text="row"></span>
+                    <button class="delete-button" style="margin-left:0.25rem;font-size:0.65rem;height:1.5em;" @click="removeRow(row)">×</button>
+                  </td>
+                  <template x-for="col in colOrder" :key="col">
+                    <td>
+                      <input type="text" class="edit-field" style="min-width:5em;"
+                             :value="tableData[row][col]"
+                             @input="tableData[row][col] = $event.target.value"/>
+                    </td>
+                  </template>
+                  <td></td>
+                </tr>
+              </template>
+              <tr>
+                <td>
+                  <div class="inline-inputs" style="gap:0.25rem;">
+                    <input type="text" x-model="newRowKey" placeholder="ROW" class="edit-field" style="width:5em;" @keydown.enter="addRow"/>
+                    <button class="inline-submit-btn" style="padding:0.3rem 0.5rem;" @click="addRow">+</button>
+                  </div>
+                </td>
+                <template x-for="col in colOrder" :key="col"><td></td></template>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="form-actions">
+          <button class="inline-submit-btn" @click="save">Save</button>
+          <button class="reset-btn" style="width:auto;" @click="goBack">Cancel</button>
+        </div>
+      </div>
+    </template>
+  </main>
+</div>
+
+<script src="/js/utils.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/store.js"></script>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.data('grammarTableEditor', () => ({
+    isLoading: true,
+    error: '',
+    langCode: '',
+    tableId: null,
+    tableName: '',
+    tableApplyOn: '',
+    tableData: {},
+    rowOrder: [],
+    colOrder: [],
+    newRowKey: '',
+    newColKey: '',
+
+    get pageTitle() { return this.tableName || 'Grammar Table'; },
+
+    async init() {
+      const params = new URLSearchParams(window.location.search);
+      this.langCode = params.get('lang') || '';
+      this.tableId = parseInt(params.get('id'));
+      if (!this.langCode || !this.tableId) {
+        this.error = 'Invalid parameters.';
+        this.isLoading = false;
+        return;
+      }
+      try {
+        const gt = await fetchGrammarTable(this.tableId);
+        if (!gt) throw new Error('not found');
+        this.tableName = gt.table_name;
+        this.tableApplyOn = gt.apply_on || '';
+        this.tableData = gt.data || {};
+        this.rowOrder = [...(gt.row_order || [])];
+        this.colOrder = [...(gt.col_order || [])];
+        document.title = `${gt.table_name} ⋄ Conlexa`;
+      } catch (e) {
+        this.error = 'Grammar table not found.';
+        console.error('Failed to fetch grammar table:', e);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    goBack() {
+      window.location.href = `/langs.html?code=${encodeURIComponent(this.langCode)}`;
+    },
+
+    async save() {
+      try {
+        await updateGrammarTable(this.langCode, this.tableId, {
+          table_name: this.tableName,
+          apply_on: this.tableApplyOn || null,
+          data: this.tableData,
+          row_order: this.rowOrder,
+          col_order: this.colOrder,
+        });
+        this.goBack();
+      } catch (e) {
+        console.error('Failed to save grammar table:', e);
+        alert('Failed to save grammar table.');
+      }
+    },
+
+    addRow() {
+      const key = this.newRowKey.trim().toUpperCase();
+      if (!key || this.rowOrder.includes(key)) return;
+      const newRow = {};
+      for (const col of this.colOrder) newRow[col] = '';
+      this.tableData = {...this.tableData, [key]: newRow};
+      this.rowOrder = [...this.rowOrder, key];
+      this.newRowKey = '';
+    },
+
+    removeRow(key) {
+      const d = {...this.tableData};
+      delete d[key];
+      this.tableData = d;
+      this.rowOrder = this.rowOrder.filter(r => r !== key);
+    },
+
+    addCol() {
+      const key = this.newColKey.trim().toUpperCase();
+      if (!key || this.colOrder.includes(key)) return;
+      const d = {};
+      for (const row of this.rowOrder) {
+        d[row] = {...this.tableData[row], [key]: ''};
+      }
+      this.tableData = d;
+      this.colOrder = [...this.colOrder, key];
+      this.newColKey = '';
+    },
+
+    removeCol(key) {
+      const d = {};
+      for (const row of this.rowOrder) {
+        const r = {...this.tableData[row]};
+        delete r[key];
+        d[row] = r;
+      }
+      this.tableData = d;
+      this.colOrder = this.colOrder.filter(c => c !== key);
+    },
+  }));
+});
+</script>
+
+</body>
+</html>
