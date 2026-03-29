@@ -101,7 +101,9 @@
 
                 <div class="inline-inputs" x-show="showAddTableForm" style="margin-top:1rem;">
                   <input type="text" x-model="newTableName" placeholder="TABLE NAME" class="edit-field"/>
-                  <input type="text" x-model="newTableApplyOn" placeholder="APPLY ON (POS)" class="edit-field" style="width:13em;flex-grow:unset" maxlength="10"/>
+                  <input type="text" x-model="newTableApplyOn" placeholder="APPLY ON (POS)" class="edit-field" maxlength="10"/>
+                  <input type="text" x-model="newTableRows" placeholder="ROWS (comma-separated)" class="edit-field" />
+                  <input type="text" x-model="newTableCols" placeholder="COLS (comma-separated)" class="edit-field" />
                   <button class="inline-submit-btn" @click="addGrammarTable">Create</button>
                   <button class="inline-submit-btn" @click="showAddTableForm = false; newTableName = ''; newTableApplyOn = ''">Cancel</button>
                 </div>
@@ -148,6 +150,8 @@ document.addEventListener('alpine:init', () => {
     showAddTableForm: false,
     newTableName: '',
     newTableApplyOn: '',
+    newTableRows: '',
+    newTableCols: '',
     get pageTitle() {
       if (this.isLoading) return 'Languages';
       return this.selectedLanguage ? 'Language Details' : 'Languages';
@@ -284,8 +288,8 @@ document.addEventListener('alpine:init', () => {
           table_name: name,
           apply_on: this.newTableApplyOn.trim() || null,
           data: {},
-          row_order: [],
-          col_order: [],
+          row_order: this.newTableRows.split(',').map(s => s.trim()).filter(s => s) || [],
+          col_order: this.newTableCols.split(',').map(s => s.trim()).filter(s => s) || [],
         });
         window.location.href = `/grammar-table.html?lang=${encodeURIComponent(this.selectedLanguage.code)}&id=${gt.id}`;
       } catch (e) {

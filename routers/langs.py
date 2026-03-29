@@ -106,8 +106,21 @@ def create_grammar_table(lang_code: str, body: dict[str, Any] = Body(...)):
     col_order = body.get("col_order")
     data = body.get("data")
     ## TODO: make able to post table with empty data, fill later
-    if not table_name or not data:
+    if not table_name:
         raise HTTPException(status_code=400, detail="'table_name' and 'data' are required")
+    
+    if data is None:
+        if not row_order or not col_order:
+            raise HTTPException(status_code=400, detail="'row_order' and 'col_order' are required when 'data' is not provided")
+        data = {row_order[i]: {col_order[j]: "" for j in range(len(col_order))} for i in range(len(row_order))}
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="'data' must be a dictionary")
+    
+    if row_order is None:
+        row_order = list(data.keys())
+    if col_order is None:
+        col_order = list(next(iter(data.values())).keys())
+    
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT 1 FROM langs WHERE code = %s", (lang_code,))
