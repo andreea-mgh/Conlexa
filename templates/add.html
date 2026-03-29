@@ -1,19 +1,8 @@
-<!DOCTYPE html>
-<html lang="en" x-data="addWord">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Add Word ⋄ Conlexa</title>
-<link rel="stylesheet" href="/style.css"/>
-<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
-</head>
-<body>
-
-<header>
-  <h1><a href="/" class="entry-link">Conlexa</a></h1>
-  <span class="subtitle">Dictionary</span>
-</header>
-
+{% extends "base.html" %}
+{% block xdata %} x-data="addWord"{% endblock %}
+{% block title %}Add Word ⋄ Conlexa{% endblock %}
+{% block subtitle %}Dictionary{% endblock %}
+{% block content %}
 <div class="layout">
   <aside>
     <a href="/dictionary" class="reset-btn" style="display:block;text-align:center;text-decoration:none">← Back</a>
@@ -74,11 +63,8 @@
     </form>
   </main>
 </div>
-
-<script src="/js/utils.js"></script>
-<script src="/js/api.js"></script>
-<script src="/js/store.js"></script>
-
+{% endblock %}
+{% block scripts %}
 <script>
 document.addEventListener('alpine:init', () => {
   Alpine.data('addWord', () => ({
@@ -87,7 +73,7 @@ document.addEventListener('alpine:init', () => {
     partsOfSpeech: [],
     isSubmitting: false,
     isLoading: true,
-    
+
     // Form data
     form: {
       word: '',
@@ -100,17 +86,17 @@ document.addEventListener('alpine:init', () => {
       example: '',
       tagsRaw: '',
     },
-    
+
     // Computed
     get submitButtonText() {
       return this.isSubmitting ? 'Adding…' : 'Add word';
     },
-    
+
     // Lifecycle
     async init() {
       await this.loadFilters();
     },
-    
+
     // Methods
     async loadFilters() {
       this.isLoading = true;
@@ -123,13 +109,13 @@ document.addEventListener('alpine:init', () => {
         this.isLoading = false;
       }
     },
-    
+
     async onLanguageChange() {
       if (!this.form.language_code) {
         this.partsOfSpeech = [];
         return;
       }
-      
+
       try {
         const partsOfSpeech = await fetchPartsOfSpeech(this.form.language_code);
         this.partsOfSpeech = partsOfSpeech;
@@ -138,17 +124,17 @@ document.addEventListener('alpine:init', () => {
         this.partsOfSpeech = [];
       }
     },
-    
+
     async submitForm() {
       if (this.isSubmitting) return;
-      
+
       this.isSubmitting = true;
-      
+
       try {
-        const tags = this.form.tagsRaw.trim() 
-          ? this.form.tagsRaw.split(',').map(t => t.trim()).filter(Boolean) 
+        const tags = this.form.tagsRaw.trim()
+          ? this.form.tagsRaw.split(',').map(t => t.trim()).filter(Boolean)
           : null;
-        
+
         const body = {
           word: this.form.word.trim(),
           word_scripted: this.form.word_scripted.trim() || null,
@@ -160,7 +146,7 @@ document.addEventListener('alpine:init', () => {
           example: this.form.example.trim() || null,
           tags: tags,
         };
-        
+
         const { id } = await createWord(body);
         window.location.href = `/word/${id}`;
       } catch (error) {
@@ -172,6 +158,4 @@ document.addEventListener('alpine:init', () => {
   }));
 });
 </script>
-
-</body>
-</html>
+{% endblock %}

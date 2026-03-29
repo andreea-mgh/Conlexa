@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Query, HTTPException, Body
+from fastapi import FastAPI, Query, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.templating import Jinja2Templates
 import psycopg2
 import psycopg2.extras
 import os
@@ -10,6 +10,7 @@ from typing import Any
 from wordshift import apply_ruleset
 
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
 app.add_middleware(
     CORSMiddleware,
@@ -205,6 +206,7 @@ def delete_part_of_speech(lang_code: str, pos_code: str):
             )
     return {"ok": True}
 
+# GRAMMAR TABLES
 
 @app.get("/api/langs/{lang_code}/grammar_tables")
 def get_grammar_tables(lang_code: str):
@@ -216,19 +218,6 @@ def get_grammar_tables(lang_code: str):
             )
             return [dict(r) for r in cur.fetchall()]
 
-@app.get("/api/grammar_tables/{table_id}")
-def get_grammar_table(table_id: int):
-    with get_conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(
-                "SELECT * FROM grammar_tables WHERE id = %s",
-                (table_id,),
-            )
-            row = cur.fetchone()
-    if row is None:
-        raise HTTPException(status_code=404, detail="Grammar table not found")
-    return dict(row)
-
 @app.post("/api/langs/{lang_code}/grammar_tables", status_code=201)
 def create_grammar_table(lang_code: str, body: dict[str, Any] = Body(...)):
     table_name = body.get("table_name")
@@ -236,6 +225,7 @@ def create_grammar_table(lang_code: str, body: dict[str, Any] = Body(...)):
     row_order = body.get("row_order")
     col_order = body.get("col_order")
     data = body.get("data")
+    ## TODO: make able to post table with empty data, fill later
     if not table_name or not data:
         raise HTTPException(status_code=400, detail="'table_name' and 'data' are required")
     with get_conn() as conn:
@@ -251,6 +241,40 @@ def create_grammar_table(lang_code: str, body: dict[str, Any] = Body(...)):
             )
             new_id = cur.fetchone()[0]
     return {"id": new_id}
+
+
+@app.get("/api/grammar_tables/{table_id}")
+def get_grammar_table(table_id: int):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM grammar_tables WHERE id = %s",
+                (table_id,),
+            )
+            row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Grammar table not found")
+    return dict(row)
+
+@app.put("/api/grammar_tables/{table_id}")
+def update_grammar_table(table_id: int, body: dict[str, Any] = Body(...)):
+    table_name = body.get("table_name")
+    apply_on = body.get("apply_on")
+    row_order = body.get("row_order")
+    col_order = body.get("col_order")
+    data = body.get("data")
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            # Check if grammar table exists
+            cur.execute("SELECT 1 FROM grammar_tables WHERE id = %s", (table_id,))
+            if cur.fetchone() is None:
+                raise HTTPException(status_code=404, detail="Grammar table not found")
+            # Update grammar table
+            cur.execute(
+                "UPDATE grammar_tables SET table_name = %s, apply_on = %s, row_order = %s, col_order = %s, data = %s WHERE id = %s",
+                (table_name, apply_on, row_order, col_order, psycopg2.extras.Json(data), table_id),
+            )
+    return {"ok": True}
 
 @app.get("/api/filters")
 def get_filters():
@@ -347,35 +371,49 @@ def search_words(
 
 # Frontend routes
 
-@app.get("/add")
-def add_page():
-    return FileResponse("site/add.html")
+@app.get("/")
+def index(request: Request):
+    return templates.TemplateResponse(request, "index.html")
 
+@app.get("/add")
+def add_page(request: Request):
+    return templates.TemplateResponse(request, "add.html")
 
 @app.get("/dictionary")
-def dictionary():
-    return FileResponse("site/dict.html")
-
+def dictionary(request: Request):
+    return templates.TemplateResponse(request, "dict.html")
 
 @app.get("/word/{word_id}")
-def word_page(word_id: int):
-    return FileResponse("site/word.html")
+def word_page(request: Request, word_id: int):
+    return templates.TemplateResponse(request, "word.html")
 
 @app.get("/phono/ipa")
-def ipa_index():
-    return FileResponse("site/ipa.html")
+def ipa_index(request: Request):
+    return templates.TemplateResponse(request, "ipa.html")
 
 @app.get("/phono/ipa/documentation")
-def ipa_docs():
-    return FileResponse("site/ipa_doc.html")
+def ipa_docs(request: Request):
+    return templates.TemplateResponse(request, "ipa_doc.html")
 
 @app.get("/phono/ipa/{lang_code}")
-def ipa_page(lang_code: str):
-    return FileResponse("site/ipa.html")
+def ipa_page(request: Request, lang_code: str):
+    return templates.TemplateResponse(request, "ipa.html")
 
 @app.get("/langs")
-def lang_index():
-    return FileResponse("site/langs.html")
+def lang_index(request: Request):
+    return templates.TemplateResponse(request, "langs.html")
+
+@app.get("/langs.html")
+def lang_index_html(request: Request):
+    return templates.TemplateResponse(request, "langs.html")
+
+@app.get("/grammar-table.html")
+def grammar_table(request: Request):
+    return templates.TemplateResponse(request, "grammar-table.html")
+
+@app.get("/ipa_doc.html")
+def ipa_doc_html(request: Request):
+    return templates.TemplateResponse(request, "ipa_doc.html")
 
 # Serve frontend
 app.mount("/", StaticFiles(directory="site", html=True), name="static")

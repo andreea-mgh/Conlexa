@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en"{% block xdata %}{% endblock %}>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% block title %}Conlexa{% endblock %}</title>
+<link rel="stylesheet" href="/style.css"/>
+<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>{% block h1 %}<a href="/" class="entry-link">Conlexa</a>{% endblock %}</h1>
+  <span class="subtitle">{% block subtitle %}{% endblock %}</span>
+</header>
+
+{% block content %}{% endblock %}
+
+<script src="/js/utils.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/store.js"></script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

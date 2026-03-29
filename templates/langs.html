@@ -1,19 +1,8 @@
-<!DOCTYPE html>
-<html lang="en" x-data="languages">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Languages ⋄ Conlexa</title>
-<link rel="stylesheet" href="/style.css"/>
-<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
-</head>
-<body>
-
-<header>
-  <h1><a href="/" class="entry-link">Conlexa</a></h1>
-  <span class="subtitle" x-text="pageTitle">Languages</span>
-</header>
-
+{% extends "base.html" %}
+{% block xdata %} x-data="languages"{% endblock %}
+{% block title %}Languages ⋄ Conlexa{% endblock %}
+{% block subtitle %}<span x-text="pageTitle">Languages</span>{% endblock %}
+{% block content %}
 <div class="layout">
   <aside>
     <button class="reset-btn" @click="goBack">← Back</button>
@@ -22,10 +11,10 @@
   <main id="main" class="main-flex">
     <!-- Loading state -->
     <div class="loading" x-show="isLoading">Loading</div>
-    
+
     <!-- Error state -->
     <div class="empty" x-show="!isLoading && error" x-text="error"></div>
-    
+
     <!-- List view -->
     <template x-if="!isLoading && !error && !selectedLanguage">
       <div>
@@ -38,7 +27,7 @@
         <div class="empty" x-show="languages.length === 0">No languages found.</div>
       </div>
     </template>
-    
+
     <!-- Detail view -->
     <template x-if="!isLoading && !error && selectedLanguage">
       <div>
@@ -141,11 +130,8 @@
     </template>
   </main>
 </div>
-
-<script src="/js/utils.js"></script>
-<script src="/js/api.js"></script>
-<script src="/js/store.js"></script>
-
+{% endblock %}
+{% block scripts %}
 <script>
 document.addEventListener('alpine:init', () => {
   Alpine.data('languages', () => ({
@@ -166,20 +152,20 @@ document.addEventListener('alpine:init', () => {
       if (this.isLoading) return 'Languages';
       return this.selectedLanguage ? 'Language Details' : 'Languages';
     },
-    
+
     // Lifecycle
     async init() {
       // Check URL for code parameter
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
-      
+
       if (code) {
         await this.loadLanguageDetail(code);
       } else {
         await this.loadLanguages();
       }
     },
-    
+
     // Methods
     async loadLanguages() {
       this.isLoading = true;
@@ -193,7 +179,7 @@ document.addEventListener('alpine:init', () => {
         this.isLoading = false;
       }
     },
-    
+
     async loadLanguageDetail(code) {
       this.isLoading = true;
       this.error = '';
@@ -210,7 +196,7 @@ document.addEventListener('alpine:init', () => {
         this.isLoading = false;
       }
     },
-    
+
     selectLanguage(code) {
       // Update URL without reloading page
       const url = new URL(window.location);
@@ -218,7 +204,7 @@ document.addEventListener('alpine:init', () => {
       window.history.pushState({}, '', url);
       this.loadLanguageDetail(code);
     },
-    
+
     goBack() {
       if (this.selectedLanguage) {
         // Clear selected language and show list
@@ -228,7 +214,7 @@ document.addEventListener('alpine:init', () => {
         this.newPosName = '';
         this.grammarTables = [];
         this.showAddTableForm = false;
-        
+
         // Update URL
         const url = new URL(window.location);
         url.searchParams.delete('code');
@@ -238,18 +224,18 @@ document.addEventListener('alpine:init', () => {
         window.location.href = '/';
       }
     },
-    
+
     async addPartOfSpeech() {
       if (!this.selectedLanguage) return;
-      
+
       const code = this.newPosCode.trim().toUpperCase();
       const name_en = this.newPosName.trim();
-      
+
       if (!code || !name_en) {
         alert('Please fill in both code and name.');
         return;
       }
-      
+
       try {
         await createPartOfSpeech(this.selectedLanguage.code, code, name_en);
         // Reload language details
@@ -263,7 +249,7 @@ document.addEventListener('alpine:init', () => {
         alert('Failed to add part of speech.');
       }
     },
-    
+
     async deletePartOfSpeech(posCode) {
       if (!this.selectedLanguage) return;
 
@@ -322,6 +308,4 @@ document.addEventListener('alpine:init', () => {
   }));
 });
 </script>
-
-</body>
-</html>
+{% endblock %}

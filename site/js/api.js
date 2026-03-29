@@ -116,10 +116,6 @@ async function fetchGrammarTables(langCode) {
     return fetchJSON(`/api/langs/${encodeURIComponent(langCode)}/grammar_tables`);
 }
 
-async function fetchGrammarTable(tableId) {
-    return fetchJSON(`/api/grammar_tables/${tableId}`);
-}
-
 async function createGrammarTable(langCode, data) {
     return fetchJSON(`/api/langs/${encodeURIComponent(langCode)}/grammar_tables`, {
         method: 'POST',
@@ -127,15 +123,19 @@ async function createGrammarTable(langCode, data) {
     });
 }
 
+async function fetchGrammarTable(tableId) {
+    return fetchJSON(`/api/grammar_tables/${tableId}`);
+}
+
 async function updateGrammarTable(langCode, tableId, data) {
-    return fetchJSON(`/api/langs/${encodeURIComponent(langCode)}/grammar_tables/${tableId}`, {
+    return fetchJSON(`/api/grammar_tables/${tableId}`, {
         method: 'PUT',
         body: JSON.stringify(data),
     });
 }
 
 async function deleteGrammarTable(langCode, tableId) {
-    const res = await fetch(`/api/langs/${encodeURIComponent(langCode)}/grammar_tables/${tableId}`, {
+    const res = await fetch(`/api/grammar_tables/${tableId}`, {
         method: 'DELETE',
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

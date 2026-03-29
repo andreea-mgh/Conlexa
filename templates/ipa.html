@@ -1,19 +1,8 @@
-<!DOCTYPE html>
-<html lang="en" x-data="ipaRuleset">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>IPA Ruleset ⋄ Conlexa</title>
-<link rel="stylesheet" href="/style.css"/>
-<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
-</head>
-<body>
-
-<header>
-  <h1><a href="/" class="entry-link">Conlexa</a></h1>
-  <span class="subtitle" x-text="pageTitle">IPA Ruleset</span>
-</header>
-
+{% extends "base.html" %}
+{% block xdata %} x-data="ipaRuleset"{% endblock %}
+{% block title %}IPA Ruleset ⋄ Conlexa{% endblock %}
+{% block subtitle %}<span x-text="pageTitle">IPA Ruleset</span>{% endblock %}
+{% block content %}
 <div class="layout">
   <aside>
     <button class="reset-btn" @click="goBack">← Back</button>
@@ -22,7 +11,7 @@
   <main id="main" class="main-flex">
     <!-- Loading state -->
     <div class="loading" x-show="isLoading">Loading</div>
-    
+
     <!-- Index view: list of languages -->
     <template x-if="!isLoading && isIndex">
       <div>
@@ -35,14 +24,14 @@
         <div class="empty" x-show="languages.length === 0">No languages found.</div>
       </div>
     </template>
-    
+
     <!-- Edit view: ruleset textarea -->
     <template x-if="!isLoading && !isIndex && language">
       <div style="display: flex; flex-direction: column; height: 100%;">
-        <textarea 
-          x-model="rulesetText" 
-          class="edit-field" 
-          spellcheck="false" 
+        <textarea
+          x-model="rulesetText"
+          class="edit-field"
+          spellcheck="false"
           style="flex:1;min-height:400px"
           placeholder="Enter IPA ruleset..."></textarea>
         <div class="form-actions">
@@ -50,16 +39,13 @@
         </div>
       </div>
     </template>
-    
+
     <!-- Error state -->
     <div class="empty" x-show="!isLoading && error" x-text="error"></div>
   </main>
 </div>
-
-<script src="/js/utils.js"></script>
-<script src="/js/api.js"></script>
-<script src="/js/store.js"></script>
-
+{% endblock %}
+{% block scripts %}
 <script>
 document.addEventListener('alpine:init', () => {
   Alpine.data('ipaRuleset', () => ({
@@ -71,25 +57,25 @@ document.addEventListener('alpine:init', () => {
     rulesetText: '',
     isSaving: false,
     error: '',
-    
+
     // Computed
     get pageTitle() {
       if (this.isIndex) return 'IPA Rulesets';
       if (this.language) return `IPA Ruleset — ${this.language.code}`;
       return 'IPA Ruleset';
     },
-    
+
     get saveButtonText() {
       if (this.isSaving) return 'Saving…';
       return 'Save';
     },
-    
+
     // Lifecycle
     async init() {
       // Determine if we're on index page or language page
       const pathEnd = window.location.pathname.split('/').filter(Boolean).pop();
       this.isIndex = pathEnd === 'ipa';
-      
+
       if (this.isIndex) {
         await this.loadLanguages();
       } else {
@@ -97,7 +83,7 @@ document.addEventListener('alpine:init', () => {
         await this.loadLanguage(langCode);
       }
     },
-    
+
     // Methods
     async loadLanguages() {
       this.isLoading = true;
@@ -112,7 +98,7 @@ document.addEventListener('alpine:init', () => {
         this.isLoading = false;
       }
     },
-    
+
     async loadLanguage(langCode) {
       this.isLoading = true;
       this.error = '';
@@ -128,10 +114,10 @@ document.addEventListener('alpine:init', () => {
         this.isLoading = false;
       }
     },
-    
+
     async save() {
       if (!this.language || this.isSaving) return;
-      
+
       this.isSaving = true;
       try {
         await updateLanguage(this.language.code, { ipa_ruleset: this.rulesetText });
@@ -147,7 +133,7 @@ document.addEventListener('alpine:init', () => {
         this.isSaving = false;
       }
     },
-    
+
     goBack() {
       if (this.isIndex) {
         window.location.href = '/';
@@ -155,13 +141,11 @@ document.addEventListener('alpine:init', () => {
         window.location.href = '/phono/ipa';
       }
     },
-    
+
     openDocs() {
       window.open('/ipa_doc.html', '_blank');
     }
   }));
 });
 </script>
-
-</body>
-</html>
+{% endblock %}

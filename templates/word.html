@@ -1,19 +1,8 @@
-<!DOCTYPE html>
-<html lang="en" x-data="word">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Conlexa</title>
-<link rel="stylesheet" href="/style.css"/>
-<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
-</head>
-<body>
-
-<header>
-  <h1><a href="/" class="entry-link">Conlexa</a></h1>
-  <span class="subtitle">Dictionary</span>
-</header>
-
+{% extends "base.html" %}
+{% block xdata %} x-data="word"{% endblock %}
+{% block title %}Conlexa{% endblock %}
+{% block subtitle %}Dictionary{% endblock %}
+{% block content %}
 <div class="layout">
   <aside>
     <button class="reset-btn" @click="goBack">← Back</button>
@@ -24,10 +13,10 @@
   <main id="content">
     <!-- Loading state -->
     <div class="loading" x-show="isLoading">Loading</div>
-    
+
     <!-- Error state -->
     <div class="empty" x-show="!isLoading && error" x-text="error"></div>
-    
+
     <!-- View mode -->
     <template x-if="!isLoading && !error && viewMode && wordData">
       <div>
@@ -48,21 +37,21 @@
             </template>
           </div>
         </div>
-        
+
         <template x-if="wordData.def_en">
           <div class="section-block">
             <div class="section-label">Definition</div>
             <div class="definition" style="font-size:1rem;max-width:none" x-text="wordData.def_en"></div>
           </div>
         </template>
-        
+
         <template x-if="wordData.etymology">
           <div class="section-block">
             <div class="section-label">Etymology</div>
             <div class="etymology" style="font-size:14px" x-text="wordData.etymology"></div>
           </div>
         </template>
-        
+
         <template x-if="wordData.tags && wordData.tags.length > 0">
           <div class="section-block">
             <div class="section-label">Tags</div>
@@ -73,7 +62,7 @@
             </div>
           </div>
         </template>
-        
+
         <template x-if="wordData.example">
           <div>
             <div class="section-label">Example</div>
@@ -82,7 +71,7 @@
         </template>
       </div>
     </template>
-    
+
     <!-- Edit mode -->
     <template x-if="!isLoading && !error && !viewMode">
       <form @submit.prevent="saveWord">
@@ -140,11 +129,8 @@
     </template>
   </main>
 </div>
-
-<script src="/js/utils.js"></script>
-<script src="/js/api.js"></script>
-<script src="/js/store.js"></script>
-
+{% endblock %}
+{% block scripts %}
 <script>
 document.addEventListener('alpine:init', () => {
   Alpine.data('word', () => ({
@@ -154,12 +140,12 @@ document.addEventListener('alpine:init', () => {
     wordData: null,
     viewMode: true,
     ipaResult: '',
-    
+
     // Edit mode state
     languageCodes: [],
     editPartsOfSpeech: [],
     isSaving: false,
-    
+
     // Edit form data
     editForm: {
       word: '',
@@ -172,7 +158,7 @@ document.addEventListener('alpine:init', () => {
       example: '',
       tagsRaw: '',
     },
-    
+
     // Lifecycle
     async init() {
       const id = window.location.pathname.split('/').pop();
@@ -180,7 +166,7 @@ document.addEventListener('alpine:init', () => {
       await this.loadFilters();
       await this.loadWord();
     },
-    
+
     // Methods
     async loadFilters() {
       try {
@@ -190,7 +176,7 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to load filters:', error);
       }
     },
-    
+
     async loadWord() {
       this.isLoading = true;
       this.error = '';
@@ -198,7 +184,7 @@ document.addEventListener('alpine:init', () => {
         const w = await fetchWord(this.id);
         this.wordData = w;
         document.title = `Word: ${w.word} ⋄ Conlexa`;
-        
+
         // Load IPA if language code exists
         if (w.language_code) {
           await this.loadIPA(w.word, w.language_code);
@@ -210,7 +196,7 @@ document.addEventListener('alpine:init', () => {
         this.isLoading = false;
       }
     },
-    
+
     async loadIPA(word, lang_code) {
       try {
         const result = await applyPhonology(word, lang_code);
@@ -219,12 +205,12 @@ document.addEventListener('alpine:init', () => {
         console.log("Failed to load IPA: ", error);
       }
     },
-    
+
     async deleteWord() {
       if (!this.wordData) return;
-      
+
       if (!confirm(`Delete "${this.wordData.word}"? This cannot be undone.`)) return;
-      
+
       try {
         await deleteWord(this.id);
         window.location.href = '/dictionary';
@@ -232,10 +218,10 @@ document.addEventListener('alpine:init', () => {
         alert('Delete failed. Please try again.');
       }
     },
-    
+
     async startEdit() {
       if (!this.wordData) return;
-      
+
       // Populate edit form with current data
       this.editForm = {
         word: this.wordData.word || '',
@@ -248,21 +234,21 @@ document.addEventListener('alpine:init', () => {
         example: this.wordData.example || '',
         tagsRaw: (this.wordData.tags || []).join(', '),
       };
-      
+
       // Load parts of speech for current language
       if (this.wordData.language_code) {
         await this.loadPartsOfSpeech(this.wordData.language_code);
       }
-      
+
       this.viewMode = false;
     },
-    
+
     async loadPartsOfSpeech(langCode) {
       if (!langCode) {
         this.editPartsOfSpeech = [];
         return;
       }
-      
+
       try {
         const partsOfSpeech = await fetchPartsOfSpeech(langCode);
         this.editPartsOfSpeech = partsOfSpeech.map(pos => pos.code);
@@ -271,21 +257,21 @@ document.addEventListener('alpine:init', () => {
         this.editPartsOfSpeech = [];
       }
     },
-    
+
     async onEditLanguageChange() {
       await this.loadPartsOfSpeech(this.editForm.language_code);
     },
-    
+
     async saveWord() {
       if (this.isSaving) return;
-      
+
       this.isSaving = true;
-      
+
       try {
-        const tags = this.editForm.tagsRaw.trim() 
-          ? this.editForm.tagsRaw.split(',').map(t => t.trim()).filter(Boolean) 
+        const tags = this.editForm.tagsRaw.trim()
+          ? this.editForm.tagsRaw.split(',').map(t => t.trim()).filter(Boolean)
           : null;
-        
+
         const body = {
           word: this.editForm.word.trim(),
           word_scripted: this.editForm.word_scripted.trim() || null,
@@ -297,9 +283,9 @@ document.addEventListener('alpine:init', () => {
           example: this.editForm.example.trim() || null,
           tags: tags,
         };
-        
+
         await updateWord(this.id, body);
-        
+
         // Reload word data and switch back to view mode
         await this.loadWord();
         this.viewMode = true;
@@ -310,17 +296,15 @@ document.addEventListener('alpine:init', () => {
         this.isSaving = false;
       }
     },
-    
+
     cancelEdit() {
       this.viewMode = true;
     },
-    
+
     goBack() {
       window.location.href = '/dictionary';
     }
   }));
 });
 </script>
-
-</body>
-</html>
+{% endblock %}

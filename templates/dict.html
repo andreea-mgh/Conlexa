@@ -1,19 +1,8 @@
-<!DOCTYPE html>
-<html lang="en" x-data="dictionary">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Dictionary ⋄ Conlexa</title>
-<link rel="stylesheet" href="/style.css"/>
-<script defer src="https://unpkg.com/alpinejs@3.14.0/dist/cdn.min.js"></script>
-</head>
-<body>
-
-<header>
-  <h1><a href="/" class="entry-link">Conlexa</a></h1>
-  <span class="subtitle">Dictionary</span>
-</header>
-
+{% extends "base.html" %}
+{% block xdata %} x-data="dictionary"{% endblock %}
+{% block title %}Dictionary ⋄ Conlexa{% endblock %}
+{% block subtitle %}Dictionary{% endblock %}
+{% block content %}
 <div class="layout">
   <aside>
     <div class="filter-group">
@@ -58,7 +47,7 @@
       <div class="loading" x-show="isLoading">Loading</div>
       <div class="empty" x-show="!isLoading && words.length === 0 && !searchQuery">No words match the current filters.</div>
       <div class="empty" x-show="!isLoading && words.length === 0 && searchQuery">No results found.</div>
-      
+
       <table x-show="!isLoading && words.length > 0">
         <thead>
           <tr>
@@ -94,31 +83,28 @@
         </tbody>
       </table>
     </div>
-    
+
     <div class="pagination" x-show="totalPages > 1" style="display:flex">
       <button class="page-btn" @click="prevPage" :disabled="currentPage === 0">← Prev</button>
-      
+
       <template x-for="i in visiblePages" :key="i">
         <button class="page-btn" :class="{ 'active': i === currentPage + 1 }" @click="goToPage(i - 1)" x-text="i"></button>
       </template>
-      
+
       <button class="page-btn" @click="nextPage" :disabled="currentPage >= totalPages - 1">Next →</button>
-      
+
       <span class="page-info" x-text="'Page ' + (currentPage + 1) + ' of ' + totalPages"></span>
     </div>
   </main>
 </div>
-
-<script src="/js/utils.js"></script>
-<script src="/js/api.js"></script>
-<script src="/js/store.js"></script>
-
+{% endblock %}
+{% block scripts %}
 <script>
 document.addEventListener('alpine:init', () => {
   Alpine.data('dictionary', () => ({
     // Constants
     PAGE_SIZE: 50,
-    
+
     // State
     filters: {
       part_of_speech: '',
@@ -132,17 +118,17 @@ document.addEventListener('alpine:init', () => {
     isLoading: false,
     searchQuery: '',
     searchTarget: 'words', // 'words', 'definitions', 'tags'
-    
+
     // Computed properties
     get totalPages() {
       return Math.ceil(this.totalWords / this.PAGE_SIZE);
     },
-    
+
     get searchTargetLabel() {
       const labels = { words: 'in: words', definitions: 'in: definitions', tags: 'in: tags' };
       return labels[this.searchTarget] || 'in: words';
     },
-    
+
     get resultsMeta() {
       if (this.isLoading) return 'Loading…';
       if (this.searchQuery && this.words.length > 0) {
@@ -153,7 +139,7 @@ document.addEventListener('alpine:init', () => {
       const end = Math.min(start + this.words.length - 1, this.totalWords);
       return `Showing ${start}–${end} of ${this.totalWords.toLocaleString()} entries`;
     },
-    
+
     get visiblePages() {
       const start = Math.max(0, this.currentPage - 2);
       const end = Math.min(this.totalPages - 1, this.currentPage + 2);
@@ -163,20 +149,20 @@ document.addEventListener('alpine:init', () => {
       }
       return pages;
     },
-    
+
     // Lifecycle
     async init() {
       await this.loadLanguages();
       await this.loadDefaultLanguage();
       await this.loadWords();
     },
-    
+
     // Methods
     esc(str) {
       // Use global esc function from utils.js
       return window.esc ? window.esc(str) : (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     },
-    
+
     getDefinitionSnippet(def) {
       if (!def) return '';
       const escaped = esc(def); // Use global esc function
@@ -185,7 +171,7 @@ document.addEventListener('alpine:init', () => {
       }
       return escaped;
     },
-    
+
     async loadLanguages() {
       try {
         const langs = await fetchLanguages();
@@ -194,7 +180,7 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to load languages:', error);
       }
     },
-    
+
     async loadDefaultLanguage() {
       try {
         const defaultLangCode = await fetchDefaultLanguage();
@@ -206,13 +192,13 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to load default language:', error);
       }
     },
-    
+
     async loadPartsOfSpeech(langCode) {
       if (!langCode) {
         this.partsOfSpeech = [];
         return;
       }
-      
+
       try {
         const partsOfSpeech = await fetchPartsOfSpeech(langCode);
         this.partsOfSpeech = partsOfSpeech;
@@ -220,13 +206,13 @@ document.addEventListener('alpine:init', () => {
         console.error('Failed to load parts of speech:', error);
       }
     },
-    
+
     async loadWords() {
       if (this.searchQuery) {
         await this.searchWords();
         return;
       }
-      
+
       this.isLoading = true;
       try {
         const data = await fetchWords({
@@ -235,7 +221,7 @@ document.addEventListener('alpine:init', () => {
           limit: this.PAGE_SIZE,
           offset: this.currentPage * this.PAGE_SIZE
         });
-        
+
         this.words = data.words || [];
         this.totalWords = data.total || 0;
       } catch (error) {
@@ -246,25 +232,25 @@ document.addEventListener('alpine:init', () => {
         this.isLoading = false;
       }
     },
-    
+
     async searchWords() {
       if (!this.searchQuery.trim()) {
         this.currentPage = 0;
         await this.loadWords();
         return;
       }
-      
+
       this.isLoading = true;
       try {
         const results = await fetchSearchResults(
-          this.searchQuery, 
-          this.searchTarget, 
-          { 
-            part_of_speech: this.filters.part_of_speech, 
-            language_code: this.filters.language_code 
+          this.searchQuery,
+          this.searchTarget,
+          {
+            part_of_speech: this.filters.part_of_speech,
+            language_code: this.filters.language_code
           }
         );
-        
+
         this.words = results;
         this.totalWords = results.length;
         this.currentPage = 0; // Reset pagination for search results
@@ -276,7 +262,7 @@ document.addEventListener('alpine:init', () => {
         this.isLoading = false;
       }
     },
-    
+
     toggleSearchField() {
       const order = ['words', 'definitions', 'tags'];
       const currentIndex = order.indexOf(this.searchTarget);
@@ -285,24 +271,24 @@ document.addEventListener('alpine:init', () => {
         this.searchWords();
       }
     },
-    
+
     clearSearch() {
       this.searchQuery = '';
       this.currentPage = 0;
       this.loadWords();
     },
-    
+
     onFilterChange() {
       this.currentPage = 0;
       this.loadWords();
     },
-    
+
     async onLanguageChange() {
       await this.loadPartsOfSpeech(this.filters.language_code);
       this.currentPage = 0;
       this.loadWords();
     },
-    
+
     prevPage() {
       if (this.currentPage > 0) {
         this.currentPage--;
@@ -310,7 +296,7 @@ document.addEventListener('alpine:init', () => {
         window.scrollTo(0, 0);
       }
     },
-    
+
     nextPage() {
       if (this.currentPage < this.totalPages - 1) {
         this.currentPage++;
@@ -318,13 +304,13 @@ document.addEventListener('alpine:init', () => {
         window.scrollTo(0, 0);
       }
     },
-    
+
     goToPage(page) {
       this.currentPage = page;
       this.loadWords();
       window.scrollTo(0, 0);
     },
-    
+
     // resetFilters() {
     //   this.filters.part_of_speech = '';
     //   this.filters.language_code = '';
@@ -335,6 +321,4 @@ document.addEventListener('alpine:init', () => {
   }));
 });
 </script>
-
-</body>
-</html>
+{% endblock %}
