@@ -63,8 +63,10 @@
               <td class="word-cell"><a class="entry-link" :href="'/word/' + word.id" x-text="esc(word.word)"></a></td>
               <td>
                 <template x-if="word.pos">
-                  <span class="pos-badge" x-text="word.pos"></span>
-                  <span class="etymology" x-text="word.class || ''"></span>
+                  <span>
+                    <span class="pos-badge" x-text="word.pos"></span>
+                    <span class="etymology" x-text="word.class"></span>
+                  </span>
                 </template>
                 <template x-if="!word.pos">
                   <span style="color:var(--text-dimmer)">—</span>
