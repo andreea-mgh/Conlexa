@@ -185,6 +185,10 @@ document.addEventListener('alpine:init', () => {
         this.wordData = w;
         document.title = `Word: ${w.word} ⋄ Conlexa`;
 
+        if (w.grammar_tables && w.grammar_tables.length > 0) {
+          console.log("Matched grammar tables: ", w.grammar_tables);
+        }
+
         // Load IPA if language code exists
         if (w.language_code) {
           await this.loadIPA(w.word, w.language_code);

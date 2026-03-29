@@ -79,6 +79,19 @@ def get_word(word_id: int):
             row = cur.fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Word not found")
+    lang_code = row["language_code"]
+    pos = row["pos"]
+    class_ = row["class"]
+    # grammar tables that apply to this word
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, table_name, apply_on, row_order, col_order, data 
+                FROM grammar_tables 
+                WHERE target_language = %s AND (apply_on IS NULL OR CONCAT('/', apply_on, '/') LIKE ANY (ARRAY[%s, %s]))
+            """, (lang_code, f"/{pos}/", f"/{pos}[{class_}]/"))
+            grammar_tables = cur.fetchall()
+    row["grammar_tables"] = [dict(t) for t in grammar_tables]
     return dict(row)
 
 
