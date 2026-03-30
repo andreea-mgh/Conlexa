@@ -145,6 +145,13 @@ def get_grammar_table(table_id: int):
             row = cur.fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Grammar table not found")
+    
+    if not row["data"]:
+        row["data"] = {}
+        for r in row["row_order"]:
+            row["data"][r] = {c: "" for c in row["col_order"]}
+    # print(row)
+    
     return dict(row)
 
 

@@ -48,8 +48,7 @@
                   <template x-for="col in colOrder" :key="col">
                     <td>
                       <input type="text" class="edit-field" style="min-width:5em;"
-                             :value="tableData[row][col]"
-                             @input="tableData[row][col] = $event.target.value"/>
+                             x-model="tableData[row][col]"/>
                     </td>
                   </template>
                   <td></td>
